@@ -1,6 +1,27 @@
 import pkg from 'whatsapp-web.js';
 const { Client, LocalAuth } = pkg;
 import qrcode from 'qrcode';
+import fs from 'fs';
+import path from 'path';
+
+// Remove stale Chromium lock files that block startup after a container restart
+const cleanupLocks = () => {
+    const lockFiles = [
+        './.wwebjs_auth/session/SingletonLock',
+        './.wwebjs_auth/session/SingletonCookie',
+        './.wwebjs_auth/session/SingletonSocket',
+    ];
+    for (const f of lockFiles) {
+        try {
+            if (fs.existsSync(f)) {
+                fs.unlinkSync(f);
+                console.log(`WhatsApp: Removed stale lock file: ${f}`);
+            }
+        } catch (e) {
+            console.warn(`WhatsApp: Could not remove lock file ${f}:`, e.message);
+        }
+    }
+};
 
 let client;
 let isReady = false;
@@ -42,6 +63,9 @@ const startClient = async () => {
         }
         client = null;
     }
+
+    // Remove any stale Chromium lock files from previous container runs
+    cleanupLocks();
 
     // Brief pause to let Chromium fully release file locks
     await new Promise(resolve => setTimeout(resolve, 3000));
