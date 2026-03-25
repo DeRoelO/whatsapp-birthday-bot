@@ -24,11 +24,29 @@ const createClient = () => new Client({
     }
 });
 
-const startClient = () => {
+let isRestarting = false;
+
+const startClient = async () => {
+    if (isRestarting) {
+        console.log('WhatsApp: Restart already in progress, skipping duplicate.');
+        return;
+    }
+    isRestarting = true;
+
     if (client) {
-        try { client.destroy(); } catch (_) {}
+        try {
+            await client.destroy();
+            console.log('WhatsApp: Old client destroyed.');
+        } catch (e) {
+            console.warn('WhatsApp: Could not cleanly destroy old client:', e.message);
+        }
+        client = null;
     }
 
+    // Brief pause to let Chromium fully release file locks
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    isRestarting = false;
     client = createClient();
 
     client.on('qr', async (qr) => {
@@ -60,8 +78,10 @@ const startClient = () => {
     client.on('disconnected', (reason) => {
         console.log('WhatsApp: Disconnected -', reason);
         isReady = false;
-        console.log('WhatsApp: Reconnecting in 5 seconds...');
-        setTimeout(startClient, 5000);
+        if (!isRestarting) {
+            console.log('WhatsApp: Reconnecting in 5 seconds...');
+            setTimeout(() => startClient(), 5000);
+        }
     });
 
     client.initialize().catch((err) => {
@@ -77,6 +97,10 @@ export const initWhatsApp = () => {
 };
 
 export const reinitWhatsApp = () => {
+    if (isRestarting) {
+        console.log('WhatsApp: Restart already in progress, skipping.');
+        return;
+    }
     console.log('WhatsApp: Reinitializing client...');
     startClient();
 };
