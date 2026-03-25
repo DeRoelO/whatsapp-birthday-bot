@@ -22,16 +22,8 @@ app.get('/', async (req, res) => {
         const stats = await getStats();
         const connected = wa.isConnected();
         const settings = await getAllSettings();
-        res.render('index', { stats, connected, settings, page: 'dashboard' });
-    } catch (err) {
-        res.status(500).send(err.message);
-    }
-});
-
-app.get('/calendar', async (req, res) => {
-    try {
         const upcoming = await getUpcomingBirthdays(60);
-        res.render('calendar', { upcoming, page: 'calendar' });
+        res.render('index', { stats, connected, settings, upcoming, page: 'dashboard' });
     } catch (err) {
         res.status(500).send(err.message);
     }
