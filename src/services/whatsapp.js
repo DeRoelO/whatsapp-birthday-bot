@@ -10,12 +10,9 @@ export const initWhatsApp = () => {
     client = new Client({
         authStrategy: new LocalAuth({ dataPath: './.wwebjs_auth' }),
         puppeteer: {
-            // Arguments to make it run smoothly inside Docker (Debian/Ubuntu)
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
                 '--no-first-run',
                 '--disable-gpu'
             ],
