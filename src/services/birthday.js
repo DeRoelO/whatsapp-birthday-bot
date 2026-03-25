@@ -72,8 +72,8 @@ export const checkAndScheduleBirthdays = async (forceNow = false) => {
 
     let sentCount = 0;
     
-    const templatesWithAgeStr = await getSetting('templates_with_age', "Hoi [NAAM], van harte gefeliciteerd met je [LEEFTIJD]e verjaardag! 🎉\nGefeliciteerd [NAAM]! 🎂 Ik wens je een hele fijne [LEEFTIJD]e verjaardag toe.");
-    const templatesWithoutAgeStr = await getSetting('templates_without_age', "Hoi [NAAM], van harte gefeliciteerd met je verjaardag! 🎉\nGefeliciteerd [NAAM]! 🎂 Ik wens je een hele fijne verjaardag toe.");
+    const templatesWithAgeStr = await getSetting('templates_with_age', "Hoi [NAAM], van harte gefeliciteerd met je [LEEFTIJD]e verjaardag!\nGefeliciteerd [NAAM]! Ik wens je een hele fijne [LEEFTIJD]e verjaardag toe.");
+    const templatesWithoutAgeStr = await getSetting('templates_without_age', "Hoi [NAAM], van harte gefeliciteerd met je verjaardag!\nGefeliciteerd [NAAM]! Ik wens je een hele fijne verjaardag toe.");
     
     const templatesWithAge = templatesWithAgeStr.split('\n').map(t => t.trim()).filter(Boolean);
     const templatesWithoutAge = templatesWithoutAgeStr.split('\n').map(t => t.trim()).filter(Boolean);
@@ -81,8 +81,29 @@ export const checkAndScheduleBirthdays = async (forceNow = false) => {
     const includeAgeStr = await getSetting('include_age', process.env.INCLUDE_AGE || 'true');
     const includeAgeSetting = includeAgeStr === 'true';
 
+    const excludedStr = await getSetting('excluded_contacts', '');
+    const excludedList = excludedStr.split('\n').map(e => e.trim().toLowerCase()).filter(Boolean);
+
     for (const contact of contacts) {
         if (!contact.phone) continue;
+
+        // Controleer of contact in de uitsluitingen lijst staat
+        let isExcluded = false;
+        const cPhone = contact.phone.toLowerCase();
+        const cName = (contact.name || '').toLowerCase();
+        const cNick = (contact.nickname || '').toLowerCase();
+
+        for (const ex of excludedList) {
+            if (cPhone.includes(ex) || cName.includes(ex) || cNick.includes(ex)) {
+                isExcluded = true;
+                break;
+            }
+        }
+
+        if (isExcluded) {
+            console.log(`Birthday Scheduler: Contact ${contact.name} overgeslagen via uitsluitingenlijst.`);
+            continue;
+        }
 
         let delayMs = 0;
         
@@ -124,7 +145,7 @@ const generateMessage = (contact, currentYear, templatesWithAge, templatesWithou
     
     // Safety fallback
     if (!templates || templates.length === 0) templates = hasAgeInfo ? templatesWithoutAge : templatesWithAge;
-    if (!templates || templates.length === 0) templates = ["Gefeliciteerd [NAAM]! 🎉"];
+    if (!templates || templates.length === 0) templates = ["Gefeliciteerd [NAAM]!"];
     
     const template = templates[Math.floor(Math.random() * templates.length)];
     

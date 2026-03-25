@@ -66,8 +66,9 @@ app.get('/settings', async (req, res) => {
             weekday_end: settings.weekday_end || process.env.SCHEDULE_WEEKDAY_END || '07:30',
             weekend_start: settings.weekend_start || process.env.SCHEDULE_WEEKEND_START || '08:30',
             weekend_end: settings.weekend_end || process.env.SCHEDULE_WEEKEND_END || '09:30',
-            templates_with_age: settings.templates_with_age || "Hoi [NAAM], van harte gefeliciteerd met je [LEEFTIJD]e verjaardag! 🎉\nGefeliciteerd [NAAM]! 🎂 Ik wens je een hele fijne [LEEFTIJD]e verjaardag toe.",
-            templates_without_age: settings.templates_without_age || "Hoi [NAAM], van harte gefeliciteerd met je verjaardag! 🎉\nGefeliciteerd [NAAM]! 🎂 Ik wens je een hele fijne verjaardag toe."
+            templates_with_age: settings.templates_with_age || "Hoi [NAAM], van harte gefeliciteerd met je [LEEFTIJD]e verjaardag!\nGefeliciteerd [NAAM]! Ik wens je een hele fijne [LEEFTIJD]e verjaardag toe.",
+            templates_without_age: settings.templates_without_age || "Hoi [NAAM], van harte gefeliciteerd met je verjaardag!\nGefeliciteerd [NAAM]! Ik wens je een hele fijne verjaardag toe.",
+            excluded_contacts: settings.excluded_contacts || ""
         };
 
         const connected = wa.isConnected();
@@ -84,7 +85,7 @@ app.post('/settings', async (req, res) => {
             'carddav_url', 'carddav_username', 'carddav_password', 
             'scheduler_enabled', 'include_age', 
             'weekday_start', 'weekday_end', 'weekend_start', 'weekend_end',
-            'templates_with_age', 'templates_without_age'
+            'templates_with_age', 'templates_without_age', 'excluded_contacts'
         ];
         
         const data = { ...req.body };
