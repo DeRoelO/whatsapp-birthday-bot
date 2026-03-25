@@ -11,6 +11,5 @@ services:
       - ./data:/app/data
       - ./.wwebjs_auth:/app/.wwebjs_auth
     environment:
-    environment:
       # Tijdzone voor de node-cron jobs (bij voorkeur niet veranderen)
       - TZ=Europe/Amsterdam
