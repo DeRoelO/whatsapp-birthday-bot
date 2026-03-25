@@ -20,6 +20,9 @@ const db = new sqlite3.Database(dbPath, (err) => {
     }
 });
 
+let dbReadyResolve;
+const dbReady = new Promise(resolve => dbReadyResolve = resolve);
+
 db.serialize(() => {
     // Contacts table
     db.run(`CREATE TABLE IF NOT EXISTS contacts (
@@ -50,30 +53,42 @@ db.serialize(() => {
     db.run(`CREATE TABLE IF NOT EXISTS settings (
         key TEXT PRIMARY KEY,
         value TEXT
-    )`);
-});
-
-// Wrapper for queries
-const run = (sql, params = []) => new Promise((resolve, reject) => {
-    db.run(sql, params, function (err) {
-        if (err) reject(err);
-        else resolve({ id: this.lastID, changes: this.changes });
+    )`, () => {
+        // Resolve the promise once the last table is definitively created
+        dbReadyResolve();
     });
 });
 
-const get = (sql, params = []) => new Promise((resolve, reject) => {
-    db.get(sql, params, (err, result) => {
-        if (err) reject(err);
-        else resolve(result);
+// Wrapper for queries (Waits for tables to be created first!)
+const run = async (sql, params = []) => {
+    await dbReady;
+    return new Promise((resolve, reject) => {
+        db.run(sql, params, function (err) {
+            if (err) reject(err);
+            else resolve({ id: this.lastID, changes: this.changes });
+        });
     });
-});
+};
 
-const all = (sql, params = []) => new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
+const get = async (sql, params = []) => {
+    await dbReady;
+    return new Promise((resolve, reject) => {
+        db.get(sql, params, (err, result) => {
+            if (err) reject(err);
+            else resolve(result);
+        });
     });
-});
+};
+
+const all = async (sql, params = []) => {
+    await dbReady;
+    return new Promise((resolve, reject) => {
+        db.all(sql, params, (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows);
+        });
+    });
+};
 
 export const getSetting = async (key, defaultValue = null) => {
     const row = await get(`SELECT value FROM settings WHERE key = ?`, [key]);
