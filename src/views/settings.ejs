@@ -135,8 +135,20 @@
                     <h5 class="mb-0"><i class="fas fa-ban me-2"></i> Excluded Contacts (Blocklist)</h5>
                 </div>
                 <div class="card-body p-4">
-                    <p class="text-muted small">Put the name or phone number of contacts that you <strong>never</strong> want to send automated birthdays to on a <strong>new line (enter)</strong>.</p>
-                    <textarea class="form-control" name="excluded_contacts" rows="4" placeholder="E.g.:&#10;John Smith&#10;+31612345678"><%= config.excluded_contacts %></textarea>
+                    <p class="text-muted small">Search for a contact to block them from automated messages. Blocked contacts appear below.</p>
+                    
+                    <div class="input-group mb-3">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" id="contactSearch" class="form-control" placeholder="Type a name or number..." list="contactsDataList">
+                        <datalist id="contactsDataList"></datalist>
+                    </div>
+
+                    <div id="blockedContainer" class="d-flex flex-wrap gap-2 mb-2">
+                        <!-- Blocked pills will appear here -->
+                    </div>
+
+                    <!-- Hidden textarea to store the newline-separated list for the form submit -->
+                    <textarea id="excluded_contacts_hidden" name="excluded_contacts" style="display:none;"><%= config.excluded_contacts %></textarea>
                 </div>
             </div>
 
@@ -228,6 +240,67 @@
         reader.readAsText(file);
         e.target.value = '';
     });
+    // Blocklist Management Logic
+    let allContacts = [];
+    const contactSearch = document.getElementById('contactSearch');
+    const contactsDataList = document.getElementById('contactsDataList');
+    const blockedContainer = document.getElementById('blockedContainer');
+    const hiddenExcluded = document.getElementById('excluded_contacts_hidden');
+
+    const updateHiddenField = () => {
+        const pills = blockedContainer.querySelectorAll('.badge [data-val]');
+        const values = Array.from(pills).map(p => p.getAttribute('data-val'));
+        hiddenExcluded.value = values.join('\n');
+    };
+
+    const addBlockedPill = (val) => {
+        if (!val) return;
+        // Check if already blocked
+        const existing = Array.from(blockedContainer.querySelectorAll('[data-val]')).map(p => p.getAttribute('data-val'));
+        if (existing.includes(val)) return;
+
+        const pill = document.createElement('div');
+        pill.className = 'badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-3 py-2 d-flex align-items-center rounded-pill';
+        pill.innerHTML = `<span class="me-2" data-val="${val}">${val}</span>
+                          <i class="fas fa-times cursor-pointer remove-blocked" style="cursor:pointer"></i>`;
+        
+        pill.querySelector('.remove-blocked').onclick = () => {
+            pill.remove();
+            updateHiddenField();
+        };
+        
+        blockedContainer.appendChild(pill);
+        updateHiddenField();
+    };
+
+    // Load initial contacts for autocomplete
+    const loadContacts = async () => {
+        try {
+            const res = await fetch('/api/contacts');
+            allContacts = await res.json();
+            contactsDataList.innerHTML = allContacts.map(c => `<option value="${c.name}">${c.phone}</option>`).join('');
+        } catch (e) {
+            console.error('Failed to load contacts for blocklist', e);
+        }
+    };
+
+    contactSearch.addEventListener('input', (e) => {
+        const val = e.target.value;
+        const match = allContacts.find(c => c.name === val);
+        if (match) {
+            addBlockedPill(match.name);
+            contactSearch.value = '';
+        }
+    });
+
+    // Handle initial state from DB
+    const initBlocklist = () => {
+        const initial = hiddenExcluded.value.split('\n').map(s => s.trim()).filter(Boolean);
+        initial.forEach(addBlockedPill);
+    };
+
+    loadContacts();
+    initBlocklist();
 </script>
 
 <%- include('partials/footer') %>

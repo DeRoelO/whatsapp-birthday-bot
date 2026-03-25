@@ -166,6 +166,10 @@ export const getStats = async () => {
     };
 };
 
+export const getAllContacts = async () => {
+    return await all(`SELECT id, name, nickname, phone FROM contacts ORDER BY name ASC`);
+};
+
 export const getUpcomingBirthdays = async (days = 30) => {
     const contacts = await all(`SELECT * FROM contacts WHERE birth_day IS NOT NULL AND birth_month IS NOT NULL`);
     

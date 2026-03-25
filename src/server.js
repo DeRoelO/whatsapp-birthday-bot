@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import * as wa from './services/whatsapp.js';
-import { getStats, getLogs, getSetting, getAllSettings, getUpcomingBirthdays, addLog, setSetting } from './db/database.js';
+import { getStats, getLogs, getSetting, getAllSettings, getUpcomingBirthdays, addLog, setSetting, getAllContacts } from './db/database.js';
 import { checkAndScheduleBirthdays } from './services/birthday.js';
 import { syncContacts } from './services/sync.js';
 
@@ -137,6 +137,16 @@ app.post('/api/test-message', async (req, res) => {
         res.json({ success: true });
     } catch (err) {
         if (phone) await addLog(null, phone, 'Test Message', text, `failed: ${err.message}`);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// API endpoint for search/autocomplete
+app.get('/api/contacts', async (req, res) => {
+    try {
+        const contacts = await getAllContacts();
+        res.json(contacts);
+    } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
 });
