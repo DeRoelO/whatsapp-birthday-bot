@@ -3,23 +3,28 @@ const { Client, LocalAuth } = pkg;
 import qrcode from 'qrcode';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Remove stale Chromium lock files that block startup after a container restart
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Remove stale Chromium lock files left by a previous container
 const cleanupLocks = () => {
-    const lockFiles = [
-        './.wwebjs_auth/session/SingletonLock',
-        './.wwebjs_auth/session/SingletonCookie',
-        './.wwebjs_auth/session/SingletonSocket',
-    ];
-    for (const f of lockFiles) {
-        try {
-            if (fs.existsSync(f)) {
-                fs.unlinkSync(f);
-                console.log(`WhatsApp: Removed stale lock file: ${f}`);
+    // Resolve absolute path: src/services/whatsapp.js → ../../.wwebjs_auth/session
+    const sessionDir = path.resolve(__dirname, '../../.wwebjs_auth/session');
+    console.log(`WhatsApp: Checking for stale locks in ${sessionDir}`);
+    try {
+        if (!fs.existsSync(sessionDir)) return;
+        const files = fs.readdirSync(sessionDir);
+        for (const f of files) {
+            if (f.startsWith('Singleton')) {
+                const full = path.join(sessionDir, f);
+                fs.unlinkSync(full);
+                console.log(`WhatsApp: Removed stale lock: ${f}`);
             }
-        } catch (e) {
-            console.warn(`WhatsApp: Could not remove lock file ${f}:`, e.message);
         }
+    } catch (e) {
+        console.warn('WhatsApp: Lock cleanup failed:', e.message);
     }
 };
 
