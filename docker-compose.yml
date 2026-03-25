@@ -8,14 +8,8 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - bot_data:/app/data
-      - bot_auth:/app/.wwebjs_auth
+      - ./data:/app/data
+      - ./.wwebjs_auth:/app/.wwebjs_auth
     shm_size: '256mb'
     environment:
       - TZ=Europe/Amsterdam
-
-# Named volumes persist across `docker-compose down` and fresh clones.
-# Only destroyed with `docker-compose down -v` (don't use that unless resetting completely).
-volumes:
-  bot_data:
-  bot_auth:

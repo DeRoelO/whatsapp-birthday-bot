@@ -64,11 +64,11 @@ export const checkAndScheduleBirthdays = async (forceNow = false) => {
     
     const contacts = await getBirthdayContactsToday();
     if (contacts.length === 0) {
-        console.log('Birthday Scheduler: Geen (nieuwe) verjaardagen gevonden voor vandaag.');
-        return { success: true, count: 0, message: 'Geen verjaardagen vandaag (of allemaal al verstuurd).' };
+        console.log('Birthday Scheduler: No (new) birthdays found for today.');
+        return { success: true, count: 0, message: 'No birthdays today (or all already sent).' };
     }
 
-    console.log(`Birthday Scheduler: ${contacts.length} verjaardagen vandaag!`);
+    console.log(`Birthday Scheduler: ${contacts.length} birthdays today!`);
 
     let sentCount = 0;
     
@@ -136,7 +136,7 @@ export const checkAndScheduleBirthdays = async (forceNow = false) => {
         sentCount++;
     }
     
-    return { success: true, count: sentCount, message: `${sentCount} berichten ${forceNow ? 'direct verstuurd' : 'ingepland'}.` };
+    return { success: true, count: sentCount, message: `${sentCount} messages ${forceNow ? 'sent immediately' : 'scheduled'}.` };
 };
 
 const generateMessage = (contact, currentYear, templatesWithAge, templatesWithoutAge, includeAgeSetting) => {
@@ -145,7 +145,7 @@ const generateMessage = (contact, currentYear, templatesWithAge, templatesWithou
     
     // Safety fallback
     if (!templates || templates.length === 0) templates = hasAgeInfo ? templatesWithoutAge : templatesWithAge;
-    if (!templates || templates.length === 0) templates = ["Gefeliciteerd [NAAM]!"];
+    if (!templates || templates.length === 0) templates = ["Happy Birthday [NAAM]!"];
     
     const template = templates[Math.floor(Math.random() * templates.length)];
     
@@ -172,7 +172,7 @@ const generateMessage = (contact, currentYear, templatesWithAge, templatesWithou
 };
 
 const executeSend = async (contact, message, currentYear) => {
-    console.log(`Birthday Scheduler: Bericht versturen naar ${contact.name} (${contact.phone})...`);
+    console.log(`Birthday Scheduler: Sending message to ${contact.name} (${contact.phone})...`);
     try {
         await sendMessage(contact.phone, message);
         await addLog(contact.id, contact.phone, contact.name, message, 'success');

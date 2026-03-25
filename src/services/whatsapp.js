@@ -1,32 +1,6 @@
 import pkg from 'whatsapp-web.js';
 const { Client, LocalAuth } = pkg;
 import qrcode from 'qrcode';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Remove stale Chromium lock files left by a previous container
-const cleanupLocks = () => {
-    // Resolve absolute path: src/services/whatsapp.js → ../../.wwebjs_auth/session
-    const sessionDir = path.resolve(__dirname, '../../.wwebjs_auth/session');
-    console.log(`WhatsApp: Checking for stale locks in ${sessionDir}`);
-    try {
-        if (!fs.existsSync(sessionDir)) return;
-        const files = fs.readdirSync(sessionDir);
-        for (const f of files) {
-            if (f.startsWith('Singleton')) {
-                const full = path.join(sessionDir, f);
-                fs.unlinkSync(full);
-                console.log(`WhatsApp: Removed stale lock: ${f}`);
-            }
-        }
-    } catch (e) {
-        console.warn('WhatsApp: Lock cleanup failed:', e.message);
-    }
-};
 
 let client;
 let isReady = false;
@@ -50,32 +24,11 @@ const createClient = () => new Client({
     }
 });
 
-let isRestarting = false;
-
-const startClient = async () => {
-    if (isRestarting) {
-        console.log('WhatsApp: Restart already in progress, skipping duplicate.');
-        return;
-    }
-    isRestarting = true;
-
+const startClient = () => {
     if (client) {
-        try {
-            await client.destroy();
-            console.log('WhatsApp: Old client destroyed.');
-        } catch (e) {
-            console.warn('WhatsApp: Could not cleanly destroy old client:', e.message);
-        }
-        client = null;
+        try { client.destroy(); } catch (_) {}
     }
 
-    // Remove any stale Chromium lock files from previous container runs
-    cleanupLocks();
-
-    // Brief pause to let Chromium fully release file locks
-    await new Promise(resolve => setTimeout(resolve, 3000));
-
-    isRestarting = false;
     client = createClient();
 
     client.on('qr', async (qr) => {
@@ -107,10 +60,8 @@ const startClient = async () => {
     client.on('disconnected', (reason) => {
         console.log('WhatsApp: Disconnected -', reason);
         isReady = false;
-        if (!isRestarting) {
-            console.log('WhatsApp: Reconnecting in 5 seconds...');
-            setTimeout(() => startClient(), 5000);
-        }
+        console.log('WhatsApp: Reconnecting in 5 seconds...');
+        setTimeout(startClient, 5000);
     });
 
     client.initialize().catch((err) => {
@@ -126,10 +77,6 @@ export const initWhatsApp = () => {
 };
 
 export const reinitWhatsApp = () => {
-    if (isRestarting) {
-        console.log('WhatsApp: Restart already in progress, skipping.');
-        return;
-    }
     console.log('WhatsApp: Reinitializing client...');
     startClient();
 };

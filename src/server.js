@@ -29,6 +29,15 @@ app.get('/', async (req, res) => {
     }
 });
 
+app.get('/calendar', async (req, res) => {
+    try {
+        const upcoming = await getUpcomingBirthdays(60);
+        res.render('calendar', { upcoming, page: 'calendar' });
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
+
 app.get('/logs', async (req, res) => {
     try {
         const logs = await getLogs(100);
