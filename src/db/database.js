@@ -30,12 +30,32 @@ db.serialize(() => {
         remote_id TEXT UNIQUE,
         name TEXT NOT NULL,
         nickname TEXT,
-        phone TEXT UNIQUE NOT NULL,
+        phone TEXT,
         birth_day INTEGER,
         birth_month INTEGER,
         birth_year INTEGER,
         last_message_year INTEGER
-    )`);
+    )`, () => {
+        // Migration: Check if NOT NULL constraint exists on 'phone'
+        db.all("PRAGMA table_info(contacts)", (err, columns) => {
+            if (err) return;
+            const phoneCol = columns.find(c => c.name === 'phone');
+            if (phoneCol && (phoneCol.notnull === 1 || phoneCol.pk === 0 && phoneCol.type.includes('UNIQUE'))) {
+                console.log('Database: Migrating contacts table (relaxing phone constraints)...');
+                db.serialize(() => {
+                    db.run("BEGIN TRANSACTION");
+                    db.run("CREATE TABLE contacts_new (id INTEGER PRIMARY KEY AUTOINCREMENT, remote_id TEXT UNIQUE, name TEXT NOT NULL, nickname TEXT, phone TEXT, birth_day INTEGER, birth_month INTEGER, birth_year INTEGER, last_message_year INTEGER)");
+                    db.run("INSERT INTO contacts_new SELECT * FROM contacts");
+                    db.run("DROP TABLE contacts");
+                    db.run("ALTER TABLE contacts_new RENAME TO contacts");
+                    db.run("COMMIT", (err) => {
+                        if (err) console.error('Database: Migration failed', err);
+                        else console.log('Database: Migration successful.');
+                    });
+                });
+            }
+        });
+    });
 
     // Message Logs table
     db.run(`CREATE TABLE IF NOT EXISTS logs (
