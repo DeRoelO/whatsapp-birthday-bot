@@ -64,6 +64,9 @@ export const syncContacts = async () => {
                 const c1 = dbContacts[i];
                 const c2 = dbContacts[j];
                 
+                // Skip if neither has a birthday (per user request: no birthday = no point in merging for this bot)
+                if (!c1.birth_day && !c2.birth_day) continue;
+
                 // If they have the same phone (and it's not empty), they are candidates but probably already unique by remote_id
                 if (c1.phone && c1.phone === c2.phone) continue; 
 
@@ -92,6 +95,17 @@ export const syncContacts = async () => {
                 }
             }
         }
+
+        // Cleanup: Remove pending suggestions where neither contact has a birthday (per user request)
+        await run(`
+            DELETE FROM merge_suggestions 
+            WHERE status = 'pending' AND id IN (
+                SELECT s.id FROM merge_suggestions s
+                JOIN contacts c1 ON s.contact_a_id = c1.id
+                JOIN contacts c2 ON s.contact_b_id = c2.id
+                WHERE c1.birth_day IS NULL AND c2.birth_day IS NULL
+            )
+        `);
 
         // Cleanup: Remove contacts that were NOT in this sync
         if (syncedRemoteIds.length > 0) {
