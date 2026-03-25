@@ -4,23 +4,23 @@
         <div class="card border-0 shadow-sm text-center bg-white rounded-3">
             <div class="card-body py-5">
                 <i class="fab fa-whatsapp fa-3x text-success mb-3"></i>
-                <h3 class="fw-bold">WhatsApp Web Applicatie</h3>
+                <h3 class="fw-bold">WhatsApp Web Link</h3>
                 <hr class="my-4" style="width: 50%; margin: 0 auto; opacity: 0.1;">
                 
                 <% if (connected) { %>
                     <div class="alert alert-success mx-4">
-                        <i class="fas fa-check-circle me-2"></i> WhatsApp is succesvol verbonden. Je bent ingelogd en de service is actief.
+                        <i class="fas fa-check-circle me-2"></i> WhatsApp is successfully connected. You are logged in and the service is active!
                     </div>
                 <% } else if (qrCodeUrl) { %>
-                    <p class="text-muted mb-4 mx-4">Scan deze QR-code met de WhatsApp app op je telefoon om de bot te koppelen.<br>(Herlaadt elke 5 seconden)</p>
+                    <p class="text-muted mb-4 mx-4">To link your bot, scan this QR code with the WhatsApp app (Linked Devices) on your phone.<br>(Reloads every 5 seconds)</p>
                     <div class="p-3 bg-light d-inline-block rounded-3 border">
                         <img src="<%= qrCodeUrl %>" alt="QR Code" class="img-fluid" style="width: 250px; height: 250px;">
                     </div>
                 <% } else { %>
                     <div class="spinner-border text-success my-4" role="status" style="width: 3rem; height: 3rem;">
-                        <span class="visually-hidden">Laden...</span>
+                        <span class="visually-hidden">Loading...</span>
                     </div>
-                    <p class="text-muted">QR-code of sessie wordt overgehaald... een ogenblik geduld.</p>
+                    <p class="text-muted">Fetching QR Code or session state... please wait.</p>
                 <% } %>
             </div>
         </div>

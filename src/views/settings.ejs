@@ -1,34 +1,51 @@
 <%- include('partials/header') %>
 <div class="row mb-4">
     <div class="col">
-        <h2 class="fw-bold">Instellingen</h2>
-        <p class="text-muted">Configureer de bot, inloggegevens, en tijdschema's direct vanuit hier.</p>
+        <h2 class="fw-bold">Settings</h2>
+        <p class="text-muted">Configure the bot, CardDAV credentials, schedules, and test the connection.</p>
     </div>
 </div>
 
 <% if (typeof saved !== 'undefined' && saved === 'true') { %>
 <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
-    <strong>Gelukt!</strong> Je instellingen zijn succesvol opgeslagen!
+    <strong>Success!</strong> Your settings have been saved.
     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
 <% } %>
 
-<div class="row justify-content-center pb-5">
-    <div class="col-md-8">
+<div class="row pb-5">
+    <div class="col-md-8 mx-auto">
+        
+        <!-- TEST CONNECTION SETTINGS -->
+        <div class="card border-0 shadow-sm mb-4 bg-white rounded-3">
+            <div class="card-header bg-warning text-dark py-3 fw-bold">
+                <h5 class="mb-0"><i class="fas fa-vial me-2"></i> Test WhatsApp Connection</h5>
+            </div>
+            <div class="card-body p-4">
+                <p class="text-muted small">Send a test message to any WhatsApp number to verify the bot is correctly linked and functioning.</p>
+                <div class="input-group mb-2">
+                    <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                    <input type="text" id="testPhone" class="form-control" placeholder="+31612345678" />
+                    <button class="btn btn-primary" type="button" id="btnTestMessage">Send Test Message</button>
+                </div>
+                <div id="testMessageAlert"></div>
+            </div>
+        </div>
+
         <form action="/settings" method="POST">
             <!-- SCHEDULER SETTINGS -->
             <div class="card border-0 shadow-sm mb-4 bg-white rounded-3">
                 <div class="card-header bg-primary text-white py-3">
-                    <h5 class="mb-0"><i class="fas fa-robot me-2"></i> Automatisering & Bot Status</h5>
+                    <h5 class="mb-0"><i class="fas fa-robot me-2"></i> Automation & Bot Status</h5>
                 </div>
                 <div class="card-body p-4">
                     <div class="form-check form-switch fs-5 mb-3">
                         <input class="form-check-input" type="checkbox" role="switch" id="scheduler_enabled" name="scheduler_enabled" value="true" <%= config.scheduler_enabled === 'true' ? 'checked' : '' %>>
-                        <label class="form-check-label" for="scheduler_enabled">Activeer automatische dagschema's (via verzendslot)</label>
+                        <label class="form-check-label" for="scheduler_enabled">Enable automatic daily scheduler</label>
                     </div>
                     <div class="form-check form-switch fs-5 mb-3">
                         <input class="form-check-input" type="checkbox" role="switch" id="include_age" name="include_age" value="true" <%= config.include_age === 'true' ? 'checked' : '' %>>
-                        <label class="form-check-label" for="include_age">Vermeld de berekenende [LEEFTIJD] indien beschikbaar in de contact info.</label>
+                        <label class="form-check-label" for="include_age">Include calculated [AGE] if it is provided by the contact info</label>
                     </div>
                 </div>
             </div>
@@ -36,7 +53,7 @@
             <!-- CARDDAV SETTINGS -->
             <div class="card border-0 shadow-sm mb-4 bg-white rounded-3">
                 <div class="card-header bg-dark text-white py-3">
-                    <h5 class="mb-0"><i class="fab fa-apple me-2"></i> iCloud Sync Informatie</h5>
+                    <h5 class="mb-0"><i class="fab fa-apple me-2"></i> iCloud Sync Credentials</h5>
                 </div>
                 <div class="card-body p-4">
                     <div class="mb-3">
@@ -44,11 +61,11 @@
                         <input type="url" class="form-control" name="carddav_url" value="<%= config.carddav_url %>" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Apple ID (Emailadres)</label>
+                        <label class="form-label fw-bold">Apple ID (Email)</label>
                         <input type="email" class="form-control" name="carddav_username" value="<%= config.carddav_username %>" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold">App-Specifiek Wachtwoord</label>
+                        <label class="form-label fw-bold">App-Specific Password</label>
                         <input type="password" class="form-control" name="carddav_password" value="<%= config.carddav_password %>" placeholder="••••••••••••••" required>
                     </div>
                 </div>
@@ -57,28 +74,28 @@
             <!-- TIME SCHEDULER SETTINGS -->
             <div class="card border-0 shadow-sm mb-4 bg-white rounded-3">
                 <div class="card-header bg-success text-white py-3">
-                    <h5 class="mb-0"><i class="fas fa-clock me-2"></i> Verzendtijden</h5>
+                    <h5 class="mb-0"><i class="fas fa-clock me-2"></i> Schedule Windows</h5>
                 </div>
                 <div class="card-body p-4">
-                    <p class="text-muted small mb-4">De bot zal elke ochtend willekeurig ergens in deze 'windows' een tijdslot opzoeken om als een echt mens aan te voelen.</p>
+                    <p class="text-muted small mb-4">The bot will pick a random time within the applicable window every day to act more human-like.</p>
                     
-                    <h6 class="fw-bold">Doordeweeks (Ma-Vr)</h6>
+                    <h6 class="fw-bold">Weekdays (Mon-Fri)</h6>
                     <div class="row align-items-center mb-4">
                         <div class="col-md-5">
                             <input type="time" class="form-control" name="weekday_start" value="<%= config.weekday_start %>">
                         </div>
-                        <div class="col-md-2 text-center text-muted">tot</div>
+                        <div class="col-md-2 text-center text-muted">to</div>
                         <div class="col-md-5">
                             <input type="time" class="form-control" name="weekday_end" value="<%= config.weekday_end %>">
                         </div>
                     </div>
                     
-                    <h6 class="fw-bold">Weekend (Za-Zo)</h6>
+                    <h6 class="fw-bold">Weekends (Sat-Sun)</h6>
                     <div class="row align-items-center mb-3">
                         <div class="col-md-5">
                             <input type="time" class="form-control" name="weekend_start" value="<%= config.weekend_start %>">
                         </div>
-                        <div class="col-md-2 text-center text-muted">tot</div>
+                        <div class="col-md-2 text-center text-muted">to</div>
                         <div class="col-md-5">
                             <input type="time" class="form-control" name="weekend_end" value="<%= config.weekend_end %>">
                         </div>
@@ -89,15 +106,15 @@
             <!-- TEMPLATE SETTINGS -->
             <div class="card border-0 shadow-sm mb-4 bg-white rounded-3">
                 <div class="card-header bg-info text-white py-3">
-                    <h5 class="mb-0"><i class="fas fa-quote-right me-2"></i> Bericht Templates</h5>
+                    <h5 class="mb-0"><i class="fas fa-quote-right me-2"></i> Message Templates</h5>
                 </div>
                 <div class="card-body p-4">
-                    <p class="text-muted small">Scheid de verschillende suggesties door ze op een <strong>nieuwe regel (enter)</strong> te zetten. Gebruik <code>[NAAM]</code> en <code>[LEEFTIJD]</code> als variabelen.</p>
+                    <p class="text-muted small">Separate suggestions by typing them on a <strong>new line (enter)</strong>. Use <code>[NAAM]</code> and <code>[LEEFTIJD]</code> as dynamic variables.</p>
                     
-                    <h6 class="fw-bold mt-4">Berichten mét leeftijd (indien bekend)</h6>
+                    <h6 class="fw-bold mt-4">Messages WITH Age (if known)</h6>
                     <textarea class="form-control mb-4" name="templates_with_age" rows="4" required><%= config.templates_with_age %></textarea>
 
-                    <h6 class="fw-bold">Berichten zónder leeftijd (als reservecopy of onbekend)</h6>
+                    <h6 class="fw-bold">Messages WITHOUT Age (fallback/unknown age)</h6>
                     <textarea class="form-control mb-2" name="templates_without_age" rows="4" required><%= config.templates_without_age %></textarea>
                 </div>
             </div>
@@ -105,18 +122,50 @@
             <!-- EXCLUSION SETTINGS -->
             <div class="card border-0 shadow-sm mb-4 bg-white rounded-3">
                 <div class="card-header bg-danger text-white py-3">
-                    <h5 class="mb-0"><i class="fas fa-ban me-2"></i> Uitgesloten Contacten (Blacklist)</h5>
+                    <h5 class="mb-0"><i class="fas fa-ban me-2"></i> Excluded Contacts (Blocklist)</h5>
                 </div>
                 <div class="card-body p-4">
-                    <p class="text-muted small">Zet op elke <strong>nieuwe regel (enter)</strong> de naam of het telefoonnummer van een contact dat <strong>nooit</strong> een geautomatiseerd bericht mag krijgen.</p>
-                    <textarea class="form-control" name="excluded_contacts" rows="4" placeholder="Bijv:&#10;Jan Jansen&#10;+31612345678"><%= config.excluded_contacts %></textarea>
+                    <p class="text-muted small">Put the name or phone number of contacts that you <strong>never</strong> want to send automated birthdays to on a <strong>new line (enter)</strong>.</p>
+                    <textarea class="form-control" name="excluded_contacts" rows="4" placeholder="E.g.:&#10;John Smith&#10;+31612345678"><%= config.excluded_contacts %></textarea>
                 </div>
             </div>
 
             <div class="d-grid mb-5">
-                <button type="submit" class="btn btn-primary btn-lg shadow-sm"><i class="fas fa-save me-2"></i> Sla instellingen op</button>
+                <button type="submit" class="btn btn-primary btn-lg shadow-sm"><i class="fas fa-save me-2"></i> Save Settings</button>
             </div>
         </form>
     </div>
 </div>
+
+<script>
+    document.getElementById('btnTestMessage').addEventListener('click', async () => {
+        const phone = document.getElementById('testPhone').value.trim();
+        if (!phone) return alert('Please enter a phone number.');
+
+        const btn = document.getElementById('btnTestMessage');
+        const alertBox = document.getElementById('testMessageAlert');
+        const ogText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        btn.disabled = true;
+
+        try {
+            const res = await fetch('/api/test-message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone })
+            });
+            const data = await res.json();
+            
+            alertBox.innerHTML = `<div class="alert alert-${data.success ? 'success' : 'danger'} mt-3 mb-0 p-2">
+                ${data.success ? 'Test message sent successfully!' : `Error: ${data.error}`}
+            </div>`;
+        } catch (e) {
+            alertBox.innerHTML = `<div class="alert alert-danger mt-3 mb-0 p-2">Request failed. Is your connection down?</div>`;
+        } finally {
+            btn.innerHTML = ogText;
+            btn.disabled = false;
+        }
+    });
+</script>
+
 <%- include('partials/footer') %>

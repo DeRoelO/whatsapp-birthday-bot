@@ -3,9 +3,9 @@ import { getBirthdayContactsToday, addLog, updateLastMessageYear, getSetting } f
 import { sendMessage } from './whatsapp.js';
 
 const DEFAULT_TEMPLATES = [
-    "Hoi [NAAM], van harte gefeliciteerd met je [LEEFTIJD] verjaardag! 🎉 Maak er een mooie dag van!",
-    "Gefeliciteerd [NAAM]! 🎂 Ik wens je een hele fijne [LEEFTIJD] verjaardag toe.",
-    "Hey [NAAM]! Van harte gefeliciteerd! 🎈 [LEEFTIJD] jaar alweer, geniet ervan!"
+    "Hi [NAAM], wishing you a very happy [LEEFTIJD]th birthday! 🎉 Have a great day!",
+    "Happy Birthday [NAAM]! 🎂 I hope you have a wonderful [LEEFTIJD]th birthday.",
+    "Hey [NAAM]! Happy birthday! 🎈 [LEEFTIJD] years already, enjoy it!"
 ];
 
 const parseTime = (timeStr, defaultHour, defaultMinute) => {
@@ -17,22 +17,22 @@ const parseTime = (timeStr, defaultHour, defaultMinute) => {
 export const startBirthdayScheduler = () => {
     // Run every day at 00:05
     cron.schedule('5 0 * * *', async () => {
-        console.log('Birthday Scheduler: Dagelijkse check draait...');
+        console.log('Birthday Scheduler: Daily check running...');
         const enabled = await getSetting('scheduler_enabled', process.env.SCHEDULER_ENABLED || 'true');
         if (enabled !== 'true') {
-            console.log('Birthday Scheduler: Scheduler is uitgeschakeld in settings.');
+            console.log('Birthday Scheduler: Scheduler disabled in settings.');
             return;
         }
         await checkAndScheduleBirthdays(false);
     });
     
-    console.log('Birthday Scheduler: Startup check loopt...');
+    console.log('Birthday Scheduler: Startup check running...');
     (async () => {
         const enabled = await getSetting('scheduler_enabled', process.env.SCHEDULER_ENABLED || 'true');
         if (enabled === 'true') {
             await checkAndScheduleBirthdays(false);
         } else {
-            console.log('Birthday Scheduler: Scheduler is handmatig uitgeschakeld via GUI.');
+            console.log('Birthday Scheduler: Scheduler manually disabled via GUI.');
         }
     })();
 };
@@ -72,8 +72,8 @@ export const checkAndScheduleBirthdays = async (forceNow = false) => {
 
     let sentCount = 0;
     
-    const templatesWithAgeStr = await getSetting('templates_with_age', "Hoi [NAAM], van harte gefeliciteerd met je [LEEFTIJD]e verjaardag!\nGefeliciteerd [NAAM]! Ik wens je een hele fijne [LEEFTIJD]e verjaardag toe.");
-    const templatesWithoutAgeStr = await getSetting('templates_without_age', "Hoi [NAAM], van harte gefeliciteerd met je verjaardag!\nGefeliciteerd [NAAM]! Ik wens je een hele fijne verjaardag toe.");
+    const templatesWithAgeStr = await getSetting('templates_with_age', "Hi [NAAM], wishing you a very happy [LEEFTIJD]th birthday!\nHappy Birthday [NAAM]! I hope you have a wonderful [LEEFTIJD]th birthday.");
+    const templatesWithoutAgeStr = await getSetting('templates_without_age', "Hi [NAAM], wishing you a very happy birthday!\nHappy Birthday [NAAM]! I hope you have a wonderful birthday.");
     
     const templatesWithAge = templatesWithAgeStr.split('\n').map(t => t.trim()).filter(Boolean);
     const templatesWithoutAge = templatesWithoutAgeStr.split('\n').map(t => t.trim()).filter(Boolean);
@@ -101,14 +101,14 @@ export const checkAndScheduleBirthdays = async (forceNow = false) => {
         }
 
         if (isExcluded) {
-            console.log(`Birthday Scheduler: Contact ${contact.name} overgeslagen via uitsluitingenlijst.`);
+            console.log(`Birthday Scheduler: Skipped contact ${contact.name} (exclusion list).`);
             continue;
         }
 
         let delayMs = 0;
         
         if (forceNow) {
-            delayMs = sentCount * 5000; // 5 sec tussen elk force-bericht
+            delayMs = sentCount * 5000; // 5 sec interval for forced messages
         } else {
             const randomMinutesAdd = Math.floor(Math.random() * windowMins);
             let targetTime = new Date(today);
@@ -124,9 +124,9 @@ export const checkAndScheduleBirthdays = async (forceNow = false) => {
         const message = generateMessage(contact, currentYear, templatesWithAge, templatesWithoutAge, includeAgeSetting);
 
         if (forceNow) {
-            console.log(`Birthday Scheduler (Force): Bericht voor ${contact.name} wordt over ${delayMs/1000} sec verstuurd`);
+            console.log(`Birthday Scheduler (Force): Message for ${contact.name} will be sent in ${delayMs/1000} sec.`);
         } else {
-            console.log(`Birthday Scheduler: Bericht voor ${contact.name} gepland op ${new Date(Date.now() + delayMs).toLocaleTimeString('nl-NL')}`);
+            console.log(`Birthday Scheduler: Message for ${contact.name} scheduled at ${new Date(Date.now() + delayMs).toLocaleTimeString('en-US')}`);
         }
 
         setTimeout(() => {
@@ -177,9 +177,9 @@ const executeSend = async (contact, message, currentYear) => {
         await sendMessage(contact.phone, message);
         await addLog(contact.id, contact.phone, contact.name, message, 'success');
         await updateLastMessageYear(contact.id, currentYear);
-        console.log(`Birthday Scheduler: Succesvol verzonden naar ${contact.name}`);
+        console.log(`Birthday Scheduler: Successfully sent to ${contact.name}`);
     } catch (err) {
-        console.error(`Birthday Scheduler: Fout bij verzenden naar ${contact.name}:`, err.message);
+        console.error(`Birthday Scheduler: Failed to send to ${contact.name}:`, err.message);
         await addLog(contact.id, contact.phone, contact.name, message, `failed: ${err.message}`);
     }
 };

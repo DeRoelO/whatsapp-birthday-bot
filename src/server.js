@@ -65,10 +65,10 @@ app.get('/settings', async (req, res) => {
             include_age: settings.include_age || 'true',
             weekday_start: settings.weekday_start || '06:30',
             weekday_end: settings.weekday_end || '07:30',
-            weekend_start: settings.weekend_start || '08:30',
-            weekend_end: settings.weekend_end || '09:30',
-            templates_with_age: settings.templates_with_age || "Hoi [NAAM], van harte gefeliciteerd met je [LEEFTIJD]e verjaardag!\nGefeliciteerd [NAAM]! Ik wens je een hele fijne [LEEFTIJD]e verjaardag toe.",
-            templates_without_age: settings.templates_without_age || "Hoi [NAAM], van harte gefeliciteerd met je verjaardag!\nGefeliciteerd [NAAM]! Ik wens je een hele fijne verjaardag toe.",
+            weekend_start: settings.weekend_start || process.env.SCHEDULE_WEEKEND_START || '08:30',
+            weekend_end: settings.weekend_end || process.env.SCHEDULE_WEEKEND_END || '09:30',
+            templates_with_age: settings.templates_with_age || "Hi [NAAM], wishing you a very happy [LEEFTIJD]th birthday!\nHappy Birthday [NAAM]! I hope you have a wonderful [LEEFTIJD]th birthday.",
+            templates_without_age: settings.templates_without_age || "Hi [NAAM], wishing you a very happy birthday!\nHappy Birthday [NAAM]! I hope you have a wonderful birthday.",
             excluded_contacts: settings.excluded_contacts || ""
         };
 
@@ -120,6 +120,18 @@ app.post('/api/send-today', async (req, res) => {
     try {
         const result = await checkAndScheduleBirthdays(true);
         res.json(result);
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// API endpoint for test message
+app.post('/api/test-message', async (req, res) => {
+    try {
+        const { phone } = req.body;
+        if (!phone) throw new Error("Phone number is required.");
+        await wa.sendMessage(phone, "🤖 Hello! This is a test message from your WhatsApp Birthday Bot. If you receive this, the connection is working perfectly!");
+        res.json({ success: true });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }

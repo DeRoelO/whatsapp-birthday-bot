@@ -1,8 +1,8 @@
 <%- include('partials/header') %>
 <div class="row mb-4">
     <div class="col">
-        <h2 class="fw-bold">Verjaardagskalender</h2>
-        <p class="text-muted">Aankomende verjaardagen in de komende 60 dagen.</p>
+        <h2 class="fw-bold">Birthday Calendar</h2>
+        <p class="text-muted">Upcoming birthdays within the next 60 days.</p>
     </div>
 </div>
 
@@ -12,49 +12,53 @@
             <table class="table table-hover mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th class="ps-4">Contact</th>
-                        <th>Telefoon</th>
-                        <th>Oorspronkelijke Datum</th>
-                        <th>Komende Verjaardag</th>
-                        <th>Leeftijd (Wordt)</th>
+                        <th class="ps-4">Date</th>
+                        <th>Name</th>
+                        <th>Age</th>
+                        <th>Days Left</th>
                     </tr>
                 </thead>
                 <tbody>
                     <% if (!upcoming || upcoming.length === 0) { %>
                         <tr>
-                            <td colspan="5" class="text-center py-5 text-muted">
+                            <td colspan="4" class="text-center py-5 text-muted">
                                 <i class="fas fa-calendar-times mb-2 fa-2x"></i><br>
-                                Geen komende verjaardagen gevonden.
+                                No upcoming birthdays found.
                             </td>
                         </tr>
                     <% } else { %>
-                        <% upcoming.forEach(contact => { %>
+                        <% upcoming.forEach(b => { %>
                             <tr>
                                 <td class="ps-4 py-3">
+                                    <h5 class="mb-0 fw-bold text-primary"><%= b.dateStr %></h5>
+                                </td>
+                                <td>
                                     <div class="d-flex align-items-center">
-                                        <div class="avatar-circle me-3">
-                                            <%= contact.name ? contact.name.charAt(0).toUpperCase() : '?' %>
+                                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; font-weight: bold;">
+                                            <%= b.name.charAt(0).toUpperCase() %>
                                         </div>
                                         <div>
-                                            <h6 class="mb-0 fw-bold"><%= contact.name %></h6>
-                                            <% if (contact.nickname) { %>
-                                                <small class="text-muted">"<%- contact.nickname %>"</small>
+                                            <h6 class="mb-0 fw-bold"><%= b.name %></h6>
+                                            <% if (b.nickname) { %>
+                                                <small class="text-muted">"<%- b.nickname %>"</small>
                                             <% } %>
                                         </div>
                                     </div>
                                 </td>
-                                <td><%= contact.phone %></td>
                                 <td>
-                                    <%= contact.birth_day %>-<%= contact.birth_month %><% if (contact.birth_year) { %>-<%= contact.birth_year %><% } %>
-                                </td>
-                                <td>
-                                    <strong><%= contact.next_birthday_date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }) %></strong>
-                                </td>
-                                <td>
-                                    <% if (contact.age !== null) { %>
-                                        <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2"><%= contact.age %> jaar</span>
+                                    <% if (b.age) { %>
+                                        <span class="badge bg-info bg-opacity-10 text-info rounded-pill px-3 py-2"><i class="fas fa-birthday-cake me-1"></i> Turns <%= b.age %></span>
                                     <% } else { %>
-                                        <span class="text-muted fst-italic">Onbekend</span>
+                                        <span class="text-muted small">Unknown</span>
+                                    <% } %>
+                                </td>
+                                <td>
+                                    <% if (b.daysUntil === 0) { %>
+                                        <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill"><i class="fas fa-star me-1"></i> Today!</span>
+                                    <% } else if (b.daysUntil === 1) { %>
+                                        <span class="badge bg-warning bg-opacity-10 text-warning px-3 py-2 rounded-pill">Tomorrow</span>
+                                    <% } else { %>
+                                        <span class="text-muted">In <strong><%= b.daysUntil %></strong> days</span>
                                     <% } %>
                                 </td>
                             </tr>

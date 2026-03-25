@@ -7,12 +7,12 @@ export const syncContacts = async () => {
     const password = (await getSetting('carddav_password')) || process.env.CARDDAV_PASSWORD;
 
     if (!url || !username || !password) {
-        console.warn('Sync: Ontbrekende CardDAV inloggegevens. Vul deze in via de Settings GUI of in .env. Sync wordt overgeslagen.');
+        console.warn('Sync: Missing CardDAV credentials. Please fill them out in the Settings GUI or .env file. Sync skipped.');
         return { success: false, error: 'Missing credentials' };
     }
 
     try {
-        console.log('Sync: Start CardDAV synchronisatie...');
+        console.log('Sync: Starting CardDAV synchronization...');
         const client = await createDAVClient({
             serverUrl: url,
             credentials: { username, password },
@@ -22,14 +22,14 @@ export const syncContacts = async () => {
 
         const addressBooks = await client.fetchAddressBooks();
         if (!addressBooks || addressBooks.length === 0) {
-            console.log('Sync: Geen adresboeken gevonden.');
-            return { success: false, error: 'No address books' };
+            console.log('Sync: No address books found.');
+            return { success: false, error: 'No address books found' };
         }
 
         let totalSynced = 0;
 
         for (const ab of addressBooks) {
-            console.log(`Sync: Adresboek ophalen: ${ab.url}`);
+            console.log(`Sync: Fetching address book: ${ab.url}`);
             
             const vcards = await client.fetchVCards({ 
                 addressBook: ab
@@ -44,10 +44,10 @@ export const syncContacts = async () => {
             }
         }
 
-        console.log(`Sync: Synchronisatie afgerond. ${totalSynced} contacten met een telefoonnummer verwerkt.`);
+        console.log(`Sync: Synchronization finished. Processed ${totalSynced} contacts with phone numbers.`);
         return { success: true, count: totalSynced };
     } catch (err) {
-        console.error('Sync: Fout tijdens het synchroniseren:', err);
+        console.error('Sync: Error during synchronization:', err);
         return { success: false, error: err.message };
     }
 };
@@ -79,7 +79,7 @@ const parseVCard = (vcardString, remoteId) => {
     }
 
     if (!name && nickname) name = nickname;
-    if (!name) name = 'Onbekend';
+    if (!name) name = 'Unknown';
 
     let birth_year = null, birth_month = null, birth_day = null;
     if (bday) {

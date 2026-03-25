@@ -1,49 +1,63 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WhatsApp Birthday Bot</title>
+    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom styling -->
     <style>
-        body { background-color: #f8f9fa; }
-        .navbar-brand i { color: #25D366; }
-        .stat-card { transition: transform 0.2s; }
-        .stat-card:hover { transform: translateY(-5px); }
-        .avatar-circle {
-            width: 40px; height: 40px; border-radius: 50%;
-            background-color: #0d6efd; color: white;
-            display: flex; align-items: center; justify-content: center;
-            font-weight: bold; font-size: 1.2rem;
+        body {
+            background-color: #f8f9fa;
+        }
+        .navbar-brand {
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        .nav-link {
+            font-weight: 500;
+        }
+        .nav-link.active {
+            font-weight: 700;
+            color: #198754 !important;
+            border-bottom: 2px solid #198754;
+        }
+        .stat-card {
+            transition: transform 0.2s ease-in-out;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
         }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm mb-5 sticky-top">
         <div class="container">
-            <a class="navbar-brand" href="/"><i class="fab fa-whatsapp"></i> Birthday Bot</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <a class="navbar-brand text-success d-flex align-items-center" href="/">
+                <i class="fab fa-whatsapp fa-2x me-2"></i> Birthday Bot
+            </a>
+            <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link <%= typeof page !== 'undefined' && page === 'dashboard' ? 'active' : '' %>" href="/"><i class="fas fa-chart-line"></i> Dashboard</a>
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item me-2">
+                        <a class="nav-link <%= typeof page !== 'undefined' && page === 'dashboard' ? 'active' : '' %>" href="/"><i class="fas fa-home me-1"></i> Dashboard</a>
+                    </li>
+                    <li class="nav-item me-2">
+                        <a class="nav-link <%= typeof page !== 'undefined' && page === 'calendar' ? 'active' : '' %>" href="/calendar"><i class="fas fa-calendar-alt me-1"></i> Birthdays</a>
+                    </li>
+                    <li class="nav-item me-2">
+                        <a class="nav-link <%= typeof page !== 'undefined' && page === 'logs' ? 'active' : '' %>" href="/logs"><i class="fas fa-history me-1"></i> Logs</a>
+                    </li>
+                    <li class="nav-item me-2">
+                        <a class="nav-link <%= typeof page !== 'undefined' && page === 'qr' ? 'active' : '' %>" href="/qr"><i class="fas fa-qrcode me-1"></i> WhatsApp</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link <%= typeof page !== 'undefined' && page === 'calendar' ? 'active' : '' %>" href="/calendar"><i class="far fa-calendar-alt"></i> Verjaardagen</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link <%= typeof page !== 'undefined' && page === 'logs' ? 'active' : '' %>" href="/logs"><i class="fas fa-history"></i> Historie</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link <%= typeof page !== 'undefined' && page === 'qr' ? 'active' : '' %>" href="/qr"><i class="fas fa-qrcode"></i> WhatsApp</a>
-                    </li>
-                </ul>
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link text-warning <%= typeof page !== 'undefined' && page === 'settings' ? 'active' : '' %>" href="/settings"><i class="fas fa-cog"></i> Instellingen</a>
+                        <a class="nav-link <%= typeof page !== 'undefined' && page === 'settings' ? 'active' : '' %>" href="/settings"><i class="fas fa-cog me-1"></i> Settings</a>
                     </li>
                 </ul>
             </div>
