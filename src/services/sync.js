@@ -74,15 +74,25 @@ export const syncContacts = async () => {
                 const w2 = getCoreWords(c2.name);
                 
                 let isMatch = false;
-                
-                // Strategy: Match if they share at least 2 "core" words in any order
-                // This covers "Jan Janssen" and "Jan Janssen Prive" even if "Prive" is a core word
-                // Or if one is just "Jan" and another "Jan Janssen", they won't match (only 1 word shared)
+
+                // 1. Strict Name Match:
+                // Shared words >= 2 AND the first core word must be the same
+                // (This avoids matching "Jan Janssen" with "Willem Janssen")
                 const shared = w1.filter(w => w2.includes(w));
-                if (shared.length >= 2) {
+                if (shared.length >= 2 && w1[0] === w2[0]) {
                     isMatch = true;
-                } else if (w1.length === 1 && w2.length === 1 && w1[0] === w2[0]) {
-                    // Small names (e.g. "Mama" and "Mama")
+                } 
+                
+                // 2. Birthday Match (Very high confidence if names are even slightly similar)
+                // If birthdays match exactly and they share at least 1 core word
+                if (!isMatch && c1.birth_day && c1.birth_day === c2.birth_day && c1.birth_month === c2.birth_month) {
+                    if (shared.length >= 1) {
+                        isMatch = true;
+                    }
+                }
+
+                // 3. Small unique names (e.g. "Mama" and "Mama")
+                if (!isMatch && w1.length === 1 && w2.length === 1 && w1[0] === w2[0]) {
                     isMatch = true;
                 }
 

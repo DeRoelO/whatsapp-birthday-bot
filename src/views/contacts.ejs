@@ -142,6 +142,22 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Danger Zone -->
+                <div class="mt-5 pt-5 border-top">
+                    <div class="card bg-light border-0">
+                        <div class="card-body p-4 d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="fw-bold text-danger mb-1">Danger Zone</h6>
+                                <p class="small text-muted mb-0">Clear all contacts, merges, and suggestions to start fresh. Settings are kept.</p>
+                            </div>
+                            <button class="btn btn-outline-danger" onclick="resetDatabase()">
+                                <i class="fas fa-trash-alt me-1"></i> Reset Database
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -193,6 +209,21 @@
             if (res.ok) location.reload();
         } catch (err) {
             alert('Error unmerging');
+        }
+    }
+
+    async function resetDatabase() {
+        if (!confirm('WARNING: This will delete ALL contacts, active merges, and suggestions from the bot\'s database. Your iCloud sync settings will be preserved. Are you absolutely sure?')) return;
+        
+        try {
+            const res = await fetch('/api/database/reset', { method: 'POST' });
+            if (res.ok) {
+                location.reload();
+            } else {
+                alert('Error resetting database');
+            }
+        } catch (err) {
+            alert('Error connecting to server');
         }
     }
 

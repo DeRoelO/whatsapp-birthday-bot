@@ -359,4 +359,13 @@ export const deleteContact = async (id) => {
     await run(`DELETE FROM contacts WHERE id = ?`, [id]);
 };
 
+export const resetDatabase = async () => {
+    await run(`DELETE FROM contacts`);
+    await run(`DELETE FROM manual_merges`);
+    await run(`DELETE FROM merge_suggestions`);
+    await run(`DELETE FROM logs`);
+    // Note: We keep 'settings' table so iCloud credentials remain
+    return { success: true };
+};
+
 export default db;
