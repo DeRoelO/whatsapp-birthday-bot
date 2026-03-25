@@ -43,6 +43,11 @@
                 <h6 class="text-muted text-uppercase fw-bold mb-3">Total Contacts (Synced)</h6>
                 <div class="display-4 text-primary mb-2"><i class="fas fa-users"></i></div>
                 <h2 class="fw-bold"><%= stats.totalContacts %></h2>
+                <% if (settings.last_sync) { %>
+                    <small class="text-muted">Last sync: <%= new Date(settings.last_sync).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) %></small>
+                <% } else { %>
+                    <small class="text-muted">Never synced</small>
+                <% } %>
             </div>
         </div>
     </div>

@@ -1,5 +1,5 @@
 import { createDAVClient } from 'tsdav';
-import { upsertContact, getSetting } from '../db/database.js';
+import { upsertContact, getSetting, setSetting } from '../db/database.js';
 
 export const syncContacts = async () => {
     const url = (await getSetting('carddav_url')) || process.env.CARDDAV_URL;
@@ -45,6 +45,7 @@ export const syncContacts = async () => {
         }
 
         console.log(`Sync: Synchronization finished. Processed ${totalSynced} contacts with phone numbers.`);
+        await setSetting('last_sync', new Date().toISOString());
         return { success: true, count: totalSynced };
     } catch (err) {
         console.error('Sync: Error during synchronization:', err);
