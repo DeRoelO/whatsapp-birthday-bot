@@ -149,7 +149,13 @@ const parseVCard = (vcardString, remoteId) => {
                 const typeInfo = parts[0].toUpperCase();
                 const num = parts.slice(1).join(':').trim();
                 const formatted = formatPhone(num);
-                phones.push({ num: formatted, isMobile: typeInfo.includes('CELL') || typeInfo.includes('MOBILE') });
+                const isMobile = typeInfo.includes('CELL') || 
+                                 typeInfo.includes('MOBILE') || 
+                                 typeInfo.includes('PRIVE') || 
+                                 typeInfo.includes('PRIVÉ') ||
+                                 typeInfo.includes('IPHONE') ||
+                                 formatted.startsWith('+316');
+                phones.push({ num: formatted, isMobile });
             }
         } else if (line.startsWith('BDAY')) {
             const parts = line.split(':');
@@ -209,6 +215,8 @@ const formatPhone = (rawPhone) => {
         cleaned = '+31' + cleaned.substring(1);
     } else if (cleaned.startsWith('0031')) {
         cleaned = '+31' + cleaned.substring(4);
+    } else if (cleaned.startsWith('316') && cleaned.length === 11) {
+        cleaned = '+' + cleaned;
     }
     return cleaned;
 };
