@@ -17,44 +17,41 @@ const db = new sqlite3.Database(dbPath, (err) => {
         console.error('Error opening database', err.message);
     } else {
         console.log('Connected to the SQLite database.');
-        initDb();
     }
 });
 
-function initDb() {
-    db.serialize(() => {
-        // Contacts table
-        db.run(`CREATE TABLE IF NOT EXISTS contacts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            remote_id TEXT UNIQUE,
-            name TEXT NOT NULL,
-            nickname TEXT,
-            phone TEXT UNIQUE NOT NULL,
-            birth_day INTEGER,
-            birth_month INTEGER,
-            birth_year INTEGER,
-            last_message_year INTEGER
-        )`);
+db.serialize(() => {
+    // Contacts table
+    db.run(`CREATE TABLE IF NOT EXISTS contacts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        remote_id TEXT UNIQUE,
+        name TEXT NOT NULL,
+        nickname TEXT,
+        phone TEXT UNIQUE NOT NULL,
+        birth_day INTEGER,
+        birth_month INTEGER,
+        birth_year INTEGER,
+        last_message_year INTEGER
+    )`);
 
-        // Message Logs table
-        db.run(`CREATE TABLE IF NOT EXISTS logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            contact_id INTEGER,
-            phone TEXT,
-            name TEXT,
-            message TEXT,
-            sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            status TEXT,
-            FOREIGN KEY (contact_id) REFERENCES contacts (id)
-        )`);
+    // Message Logs table
+    db.run(`CREATE TABLE IF NOT EXISTS logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        contact_id INTEGER,
+        phone TEXT,
+        name TEXT,
+        message TEXT,
+        sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        status TEXT,
+        FOREIGN KEY (contact_id) REFERENCES contacts (id)
+    )`);
 
-        // Settings table
-        db.run(`CREATE TABLE IF NOT EXISTS settings (
-            key TEXT PRIMARY KEY,
-            value TEXT
-        )`);
-    });
-}
+    // Settings table
+    db.run(`CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT
+    )`);
+});
 
 // Wrapper for queries
 const run = (sql, params = []) => new Promise((resolve, reject) => {
