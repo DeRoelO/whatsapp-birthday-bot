@@ -12,6 +12,13 @@
     </div>
 </div>
 
+<% if (!settings.carddav_username || !settings.carddav_password) { %>
+    <div class="alert alert-warning shadow-sm mb-4 border-0">
+        <h5>🚀 Welkom bij de WhatsApp Birthday Bot!</h5>
+        <p class="mb-0">Het lijkt erop dat we nog geen contactgegevens hebben. Ga naar <strong><a href="/settings" class="alert-link">Instellingen</a></strong> om je iCloud (CardDAV) of Apple ID in te stellen, en naar <strong><a href="/qr" class="alert-link">WhatsApp</a></strong> om je telefoon the koppelen via de QR code!</p>
+    </div>
+<% } %>
+
 <div id="alertContainer"></div>
 
 <div class="row g-4">

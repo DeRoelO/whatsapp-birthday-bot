@@ -21,7 +21,8 @@ app.get('/', async (req, res) => {
     try {
         const stats = await getStats();
         const connected = wa.isConnected();
-        res.render('index', { stats, connected, page: 'dashboard' });
+        const settings = await getAllSettings();
+        res.render('index', { stats, connected, settings, page: 'dashboard' });
     } catch (err) {
         res.status(500).send(err.message);
     }
@@ -57,15 +58,15 @@ app.get('/settings', async (req, res) => {
         const settings = await getAllSettings();
         
         const config = {
-            carddav_url: settings.carddav_url || process.env.CARDDAV_URL || '',
-            carddav_username: settings.carddav_username || process.env.CARDDAV_USERNAME || '',
-            carddav_password: settings.carddav_password || process.env.CARDDAV_PASSWORD || '',
-            scheduler_enabled: settings.scheduler_enabled || process.env.SCHEDULER_ENABLED || 'true',
-            include_age: settings.include_age || process.env.INCLUDE_AGE || 'true',
-            weekday_start: settings.weekday_start || process.env.SCHEDULE_WEEKDAY_START || '06:30',
-            weekday_end: settings.weekday_end || process.env.SCHEDULE_WEEKDAY_END || '07:30',
-            weekend_start: settings.weekend_start || process.env.SCHEDULE_WEEKEND_START || '08:30',
-            weekend_end: settings.weekend_end || process.env.SCHEDULE_WEEKEND_END || '09:30',
+            carddav_url: settings.carddav_url || 'https://contacts.icloud.com/',
+            carddav_username: settings.carddav_username || '',
+            carddav_password: settings.carddav_password || '',
+            scheduler_enabled: settings.scheduler_enabled || 'true',
+            include_age: settings.include_age || 'true',
+            weekday_start: settings.weekday_start || '06:30',
+            weekday_end: settings.weekday_end || '07:30',
+            weekend_start: settings.weekend_start || '08:30',
+            weekend_end: settings.weekend_end || '09:30',
             templates_with_age: settings.templates_with_age || "Hoi [NAAM], van harte gefeliciteerd met je [LEEFTIJD]e verjaardag!\nGefeliciteerd [NAAM]! Ik wens je een hele fijne [LEEFTIJD]e verjaardag toe.",
             templates_without_age: settings.templates_without_age || "Hoi [NAAM], van harte gefeliciteerd met je verjaardag!\nGefeliciteerd [NAAM]! Ik wens je een hele fijne verjaardag toe.",
             excluded_contacts: settings.excluded_contacts || ""
