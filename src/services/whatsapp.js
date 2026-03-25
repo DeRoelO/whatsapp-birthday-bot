@@ -76,6 +76,11 @@ export const initWhatsApp = () => {
     startClient();
 };
 
+export const reinitWhatsApp = () => {
+    console.log('WhatsApp: Reinitializing client...');
+    startClient();
+};
+
 export const isConnected = () => isReady;
 
 export const getQrCodeDataUrl = () => qrCodeDataUrl;
