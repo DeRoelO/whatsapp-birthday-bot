@@ -48,27 +48,42 @@ export const syncContacts = async () => {
             totalProcessed++;
         }
 
-        // --- Suggestion Logic (Option C v2 refined) ---
+        // --- Suggestion Logic (Improved Dutch name matching) ---
         console.log('Sync: Analyzing contacts for merge suggestions...');
-        const dbContacts = await getAllContacts(); // We need IDs for suggestions
-        const getWords = (n) => n.toLowerCase().replace(/[^a-z0-9 ]/g, '').split(/\s+/).filter(w => w.length > 1);
+        const dbContacts = await getAllContacts(); 
+        
+        // Dutch particles to ignore for the "prefix/core" matching
+        const particles = ['van', 'de', 'der', 'den', 'het', 't', 'v.d.', 'vd'];
+        const getCoreWords = (n) => n.toLowerCase()
+            .replace(/[^a-z0-9 ]/g, ' ')
+            .split(/\s+/)
+            .filter(w => w.length > 1 && !particles.includes(w));
         
         for (let i = 0; i < dbContacts.length; i++) {
             for (let j = i + 1; j < dbContacts.length; j++) {
                 const c1 = dbContacts[i];
                 const c2 = dbContacts[j];
                 
-                const w1 = getWords(c1.name);
-                const w2 = getWords(c2.name);
+                // If they have the same phone (and it's not empty), they are candidates but probably already unique by remote_id
+                if (c1.phone && c1.phone === c2.phone) continue; 
+
+                const w1 = getCoreWords(c1.name);
+                const w2 = getCoreWords(c2.name);
                 
-                let match = false;
-                if (w1.length >= 2 && w2.length >= 2) {
-                    match = (w1[0] === w2[0] && w1[1] === w2[1]);
-                } else if (w1.length === 1 && w2.length === 1) {
-                    match = (w1[0] === w2[0]);
+                let isMatch = false;
+                
+                // Strategy: Match if they share at least 2 "core" words in any order
+                // This covers "Jan Janssen" and "Jan Janssen Prive" even if "Prive" is a core word
+                // Or if one is just "Jan" and another "Jan Janssen", they won't match (only 1 word shared)
+                const shared = w1.filter(w => w2.includes(w));
+                if (shared.length >= 2) {
+                    isMatch = true;
+                } else if (w1.length === 1 && w2.length === 1 && w1[0] === w2[0]) {
+                    // Small names (e.g. "Mama" and "Mama")
+                    isMatch = true;
                 }
 
-                if (match) {
+                if (isMatch) {
                     // Check if already merged
                     const existingMerge = await get(`SELECT master_id FROM manual_merges WHERE (master_id = ? AND slave_id = ?) OR (master_id = ? AND slave_id = ?)`, [c1.id, c2.id, c2.id, c1.id]);
                     if (!existingMerge) {
@@ -96,30 +111,31 @@ export const syncContacts = async () => {
 const parseVCard = (vcardString, remoteId) => {
     const lines = vcardString.split(/\r?\n/);
     let name = '';
-    let nickname = null;
-    let phone = null;
+    let nickname = '';
+    let phone = '';
+    let company = '';
+    let email = '';
     let bday = null;
+
+    let phones = [];
 
     for (const line of lines) {
         if (line.startsWith('FN:')) {
             name = line.substring(3).trim();
         } else if (line.startsWith('NICKNAME:')) {
             nickname = line.substring(9).trim();
+        } else if (line.startsWith('ORG:')) {
+            company = line.substring(4).split(';')[0].replace(/\\/g, '').trim();
+        } else if (line.startsWith('EMAIL')) {
+            const parts = line.split(':');
+            if (parts.length > 1) email = parts[1].trim();
         } else if (line.startsWith('TEL')) {
             const parts = line.split(':');
             if (parts.length > 1) {
                 const typeInfo = parts[0].toUpperCase();
                 const num = parts.slice(1).join(':').trim();
                 const formatted = formatPhone(num);
-                
-                // Prioritize: CELL/MOBILE > PREF > anything else
-                if (!phone || typeInfo.includes('CELL') || typeInfo.includes('MOBILE')) {
-                    phone = formatted;
-                    // If we found a mobile number, we can stop looking
-                    if (typeInfo.includes('CELL') || typeInfo.includes('MOBILE')) break;
-                } else if (typeInfo.includes('PREF') && (!phone || !phone.includes('CELL'))) {
-                    phone = formatted;
-                }
+                phones.push({ num: formatted, isMobile: typeInfo.includes('CELL') || typeInfo.includes('MOBILE') });
             }
         } else if (line.startsWith('BDAY')) {
             const parts = line.split(':');
@@ -128,6 +144,10 @@ const parseVCard = (vcardString, remoteId) => {
             }
         }
     }
+
+    // Pick best phone
+    const mobile = phones.find(p => p.isMobile);
+    phone = mobile ? mobile.num : (phones[0] ? phones[0].num : '');
 
     if (!name && nickname) name = nickname;
     if (!name) name = 'Unknown';
@@ -153,16 +173,15 @@ const parseVCard = (vcardString, remoteId) => {
     if (birth_year !== null) {
         const currentYear = new Date().getFullYear();
         const age = currentYear - birth_year;
-        // Sanity check: ignore implausible years (e.g., Apple's default 1604, or year = current year)
-        if (age < 12 || age > 90) {
-            birth_year = null;
-        }
+        if (age < 12 || age > 110) birth_year = null;
     }
 
     return {
         remote_id: remoteId,
         name,
         nickname,
+        company,
+        email,
         phone,
         birth_day,
         birth_month,

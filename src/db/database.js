@@ -30,6 +30,8 @@ db.serialize(() => {
         remote_id TEXT UNIQUE,
         name TEXT NOT NULL,
         nickname TEXT,
+        company TEXT,
+        email TEXT,
         phone TEXT,
         birth_day INTEGER,
         birth_month INTEGER,
@@ -40,12 +42,20 @@ db.serialize(() => {
         db.all("PRAGMA table_info(contacts)", (err, columns) => {
             if (err) return;
             const phoneCol = columns.find(c => c.name === 'phone');
-            if (phoneCol && (phoneCol.notnull === 1 || phoneCol.pk === 0 && phoneCol.type.includes('UNIQUE'))) {
-                console.log('Database: Migrating contacts table (relaxing phone constraints)...');
+            const companyCol = columns.find(c => c.name === 'company');
+            
+            // Recreate if schema is old (either phone is NOT NULL or company is missing)
+            if (phoneCol && (phoneCol.notnull === 1) || !companyCol) {
+                console.log('Database: Migrating contacts table (adding fields/relaxing constraints)...');
                 db.serialize(() => {
                     db.run("BEGIN TRANSACTION");
-                    db.run("CREATE TABLE contacts_new (id INTEGER PRIMARY KEY AUTOINCREMENT, remote_id TEXT UNIQUE, name TEXT NOT NULL, nickname TEXT, phone TEXT, birth_day INTEGER, birth_month INTEGER, birth_year INTEGER, last_message_year INTEGER)");
-                    db.run("INSERT INTO contacts_new SELECT * FROM contacts");
+                    db.run("CREATE TABLE contacts_new (id INTEGER PRIMARY KEY AUTOINCREMENT, remote_id TEXT UNIQUE, name TEXT NOT NULL, nickname TEXT, company TEXT, email TEXT, phone TEXT, birth_day INTEGER, birth_month INTEGER, birth_year INTEGER, last_message_year INTEGER)");
+                    
+                    // Map old columns to new ones (email/company might not exist in old)
+                    const oldCols = columns.map(c => c.name).filter(n => ['id', 'remote_id', 'name', 'nickname', 'phone', 'birth_day', 'birth_month', 'birth_year', 'last_message_year'].includes(n));
+                    const colsStr = oldCols.join(', ');
+                    db.run(`INSERT INTO contacts_new (${colsStr}) SELECT ${colsStr} FROM contacts`);
+                    
                     db.run("DROP TABLE contacts");
                     db.run("ALTER TABLE contacts_new RENAME TO contacts");
                     db.run("COMMIT", (err) => {
@@ -146,22 +156,24 @@ export const getAllSettings = async () => {
 };
 
 export const upsertContact = async (contact) => {
-    const existing = await get(`SELECT id, birth_day, birth_month, birth_year FROM contacts WHERE remote_id = ?`, [contact.remote_id]);
+    const existing = await get(`SELECT id, birth_day, birth_month, birth_year, company, email FROM contacts WHERE remote_id = ?`, [contact.remote_id]);
     
     if (existing) {
         const bDay = contact.birth_day || existing.birth_day;
         const bMonth = contact.birth_month || existing.birth_month;
         const bYear = contact.birth_year || existing.birth_year;
+        const company = contact.company || existing.company;
+        const email = contact.email || existing.email;
         
         await run(
-            `UPDATE contacts SET name = ?, nickname = ?, phone = ?, birth_day = ?, birth_month = ?, birth_year = ? WHERE remote_id = ?`,
-            [contact.name, contact.nickname, contact.phone, bDay, bMonth, bYear, contact.remote_id]
+            `UPDATE contacts SET name = ?, nickname = ?, company = ?, email = ?, phone = ?, birth_day = ?, birth_month = ?, birth_year = ? WHERE remote_id = ?`,
+            [contact.name, contact.nickname, company, email, contact.phone, bDay, bMonth, bYear, contact.remote_id]
         );
         return existing.id;
     } else {
         const res = await run(
-            `INSERT INTO contacts (remote_id, name, nickname, phone, birth_day, birth_month, birth_year) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [contact.remote_id, contact.name, contact.nickname, contact.phone, contact.birth_day, contact.birth_month, contact.birth_year]
+            `INSERT INTO contacts (remote_id, name, nickname, company, email, phone, birth_day, birth_month, birth_year) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [contact.remote_id, contact.name, contact.nickname, contact.company, contact.email, contact.phone, contact.birth_day, contact.birth_month, contact.birth_year]
         );
         return res.id;
     }
@@ -260,7 +272,7 @@ export const getStats = async () => {
 };
 
 export const getAllContacts = async () => {
-    return await all(`SELECT id, name, nickname, phone FROM contacts ORDER BY name ASC`);
+    return await all(`SELECT id, name, nickname, company, email, phone FROM contacts ORDER BY name ASC`);
 };
 
 export const getUpcomingBirthdays = async (days = 30) => {
@@ -325,7 +337,9 @@ export const getManualMerges = async () => {
 
 export const getMergeSuggestions = async () => {
     return await all(`
-        SELECT s.*, c1.name as name_a, c1.phone as phone_a, c2.name as name_b, c2.phone as phone_b
+        SELECT s.*, 
+               c1.name as name_a, c1.phone as phone_a, c1.company as company_a, c1.email as email_a,
+               c2.name as name_b, c2.phone as phone_b, c2.company as company_b, c2.email as email_b
         FROM merge_suggestions s
         JOIN contacts c1 ON s.contact_a_id = c1.id
         JOIN contacts c2 ON s.contact_b_id = c2.id
