@@ -146,7 +146,7 @@ export const getAllSettings = async () => {
 };
 
 export const upsertContact = async (contact) => {
-    const existing = await get(`SELECT id, birth_day, birth_month, birth_year FROM contacts WHERE phone = ?`, [contact.phone]);
+    const existing = await get(`SELECT id, birth_day, birth_month, birth_year FROM contacts WHERE remote_id = ?`, [contact.remote_id]);
     
     if (existing) {
         const bDay = contact.birth_day || existing.birth_day;
@@ -154,8 +154,8 @@ export const upsertContact = async (contact) => {
         const bYear = contact.birth_year || existing.birth_year;
         
         await run(
-            `UPDATE contacts SET remote_id = ?, name = ?, nickname = ?, birth_day = ?, birth_month = ?, birth_year = ? WHERE phone = ?`,
-            [contact.remote_id, contact.name, contact.nickname, bDay, bMonth, bYear, contact.phone]
+            `UPDATE contacts SET name = ?, nickname = ?, phone = ?, birth_day = ?, birth_month = ?, birth_year = ? WHERE remote_id = ?`,
+            [contact.name, contact.nickname, contact.phone, bDay, bMonth, bYear, contact.remote_id]
         );
         return existing.id;
     } else {
