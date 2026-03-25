@@ -1,10 +1,10 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getStats, getUpcomingBirthdays, getLogs, getAllSettings, setSetting } from './db/database.js';
 import * as wa from './services/whatsapp.js';
-import { syncContacts } from './services/sync.js';
+import { getStats, getLogs, getSetting, getAllSettings, getUpcomingBirthdays, addLog, setSetting } from './db/database.js';
 import { checkAndScheduleBirthdays } from './services/birthday.js';
+import { syncContacts } from './services/sync.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -127,12 +127,15 @@ app.post('/api/send-today', async (req, res) => {
 
 // API endpoint for test message
 app.post('/api/test-message', async (req, res) => {
+    const phone = req.body.phone;
+    const text = "🤖 Hello! This is a test message from your WhatsApp Birthday Bot. If you receive this, the connection is working perfectly!";
     try {
-        const { phone } = req.body;
         if (!phone) throw new Error("Phone number is required.");
-        await wa.sendMessage(phone, "🤖 Hello! This is a test message from your WhatsApp Birthday Bot. If you receive this, the connection is working perfectly!");
+        await wa.sendMessage(phone, text);
+        await addLog(null, phone, 'Test Message', text, 'success');
         res.json({ success: true });
     } catch (err) {
+        if (phone) await addLog(null, phone, 'Test Message', text, `failed: ${err.message}`);
         res.status(500).json({ success: false, error: err.message });
     }
 });

@@ -65,7 +65,10 @@
                         <input type="email" class="form-control" name="carddav_username" value="<%= config.carddav_username %>" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold">App-Specific Password</label>
+                        <label class="form-label fw-bold">
+                            App-Specific Password 
+                            <a href="#" data-bs-toggle="modal" data-bs-target="#appPasswordModal" class="ms-1 text-muted" title="Need help?"><i class="fas fa-question-circle"></i></a>
+                        </label>
                         <input type="password" class="form-control" name="carddav_password" value="<%= config.carddav_password %>" placeholder="••••••••••••••" required>
                     </div>
                 </div>
@@ -135,6 +138,31 @@
             </div>
         </form>
     </div>
+</div>
+
+<!-- App-Specific Password Help Modal -->
+<div class="modal fade" id="appPasswordModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-dark text-white border-0">
+        <h5 class="modal-title"><i class="fab fa-apple me-2"></i> How to create an App-Specific Password</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <p>Because you have Two-Factor Authentication enabled on your Apple ID, you cannot use your normal Apple password for this bot. Apple requires you to generate a unique "App-Specific password". Here is how:</p>
+        <ol class="mb-0">
+            <li class="mb-2">Go to <a href="https://appleid.apple.com" target="_blank" class="fw-bold text-decoration-none">appleid.apple.com</a> and sign in.</li>
+            <li class="mb-2">Click on <strong>App-Specific Passwords</strong>.</li>
+            <li class="mb-2">Click <strong>Generate an app-specific password</strong> or the <strong>+</strong> button.</li>
+            <li class="mb-2">Enter a name (e.g., "WhatsApp Birthday Bot") and click <strong>Create</strong>.</li>
+            <li class="mb-0">Copy the generated password (usually formatted like <code>abcd-efgh-ijkl-mnop</code>) and paste it into the field on this page.</li>
+        </ol>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got it!</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>

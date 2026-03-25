@@ -67,7 +67,15 @@ export const sendMessage = async (phone, text) => {
     }
 
     // Phone numbers from CardDAV could be anything, but we need them in format 31612345678@c.us
-    const cleanPhone = phone.replace(/[^0-9]/g, ''); // strip out + and dashes
+    let cleanPhone = phone.replace(/[^0-9]/g, ''); // strip out + and dashes
+    
+    // Auto-correct Dutch local numbers (06... -> 316...)
+    if (cleanPhone.startsWith('06') && cleanPhone.length === 10) {
+        cleanPhone = '31' + cleanPhone.substring(1);
+    } else if (cleanPhone.startsWith('00')) {
+        cleanPhone = cleanPhone.substring(2);
+    }
+
     const chatId = `${cleanPhone}@c.us`;
 
     try {
