@@ -1,5 +1,5 @@
 import { createDAVClient } from 'tsdav';
-import { upsertContact, getSetting, setSetting } from '../db/database.js';
+import { upsertContact, getSetting, setSetting, run } from '../db/database.js';
 
 export const syncContacts = async () => {
     const url = (await getSetting('carddav_url')) || process.env.CARDDAV_URL;
@@ -27,24 +27,68 @@ export const syncContacts = async () => {
         }
 
         let totalSynced = 0;
+        const allContacts = [];
 
         for (const ab of addressBooks) {
             console.log(`Sync: Fetching address book: ${ab.url}`);
-            
-            const vcards = await client.fetchVCards({ 
-                addressBook: ab
-            });
+            const vcards = await client.fetchVCards({ addressBook: ab });
 
             for (const item of vcards) {
                 const contact = parseVCard(item.data, item.url);
-                if (contact && contact.phone) {
-                    await upsertContact(contact);
-                    totalSynced++;
+                if (contact && contact.phone && contact.birth_day && contact.birth_month) {
+                    allContacts.push(contact);
                 }
             }
         }
 
-        console.log(`Sync: Synchronization finished. Processed ${totalSynced} contacts with phone numbers.`);
+        // --- Option C: Smart Deduplication ---
+        // Group by birthday (Month-Day)
+        const groups = {};
+        for (const c of allContacts) {
+            const key = `${c.birth_month}-${c.birth_day}`;
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(c);
+        }
+
+        const normalized = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+        const cleanedContacts = [];
+        for (const key in groups) {
+            const candidates = groups[key];
+            // Sort by name length descending (longest name first)
+            candidates.sort((a, b) => b.name.length - a.name.length);
+
+            const kept = [];
+            for (const cand of candidates) {
+                const normCand = normalized(cand.name);
+                const isDuplicate = kept.some(k => {
+                    const normK = normalized(k.name);
+                    return normK.includes(normCand) || normCand.includes(normK);
+                });
+
+                if (!isDuplicate) {
+                    kept.push(cand);
+                    cleanedContacts.push(cand);
+                } else {
+                    console.log(`Sync: Deduplicated "${cand.name}" as it matches "${kept.find(k => normalized(k.name).includes(normCand) || normCand.includes(normalized(k.name))).name}"`);
+                }
+            }
+        }
+
+        const syncedRemoteIds = [];
+        for (const contact of cleanedContacts) {
+            await upsertContact(contact);
+            syncedRemoteIds.push(contact.remote_id);
+            totalSynced++;
+        }
+
+        // Cleanup: Remove contacts that were NOT in this sync (filtered out by deduplication or deleted from iCloud)
+        if (syncedRemoteIds.length > 0) {
+            const placeholders = syncedRemoteIds.map(() => '?').join(',');
+            await run(`DELETE FROM contacts WHERE remote_id NOT IN (${placeholders})`, syncedRemoteIds);
+        }
+
+        console.log(`Sync: Synchronization finished. Processed ${totalSynced} unique contacts with phone numbers.`);
         await setSetting('last_sync', new Date().toISOString());
         return { success: true, count: totalSynced };
     } catch (err) {
