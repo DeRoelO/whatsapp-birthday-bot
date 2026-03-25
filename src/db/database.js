@@ -60,7 +60,7 @@ db.serialize(() => {
 });
 
 // Wrapper for queries (Waits for tables to be created first!)
-const run = async (sql, params = []) => {
+export const run = async (sql, params = []) => {
     await dbReady;
     return new Promise((resolve, reject) => {
         db.run(sql, params, function (err) {
@@ -70,7 +70,7 @@ const run = async (sql, params = []) => {
     });
 };
 
-const get = async (sql, params = []) => {
+export const get = async (sql, params = []) => {
     await dbReady;
     return new Promise((resolve, reject) => {
         db.get(sql, params, (err, result) => {
@@ -80,7 +80,7 @@ const get = async (sql, params = []) => {
     });
 };
 
-const all = async (sql, params = []) => {
+export const all = async (sql, params = []) => {
     await dbReady;
     return new Promise((resolve, reject) => {
         db.all(sql, params, (err, rows) => {
