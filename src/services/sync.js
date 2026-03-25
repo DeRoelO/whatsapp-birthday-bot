@@ -67,9 +67,19 @@ const parseVCard = (vcardString, remoteId) => {
             nickname = line.substring(9).trim();
         } else if (line.startsWith('TEL')) {
             const parts = line.split(':');
-            if (parts.length > 1 && !phone) {
-                let num = parts.slice(1).join(':').trim();
-                phone = formatPhone(num);
+            if (parts.length > 1) {
+                const typeInfo = parts[0].toUpperCase();
+                const num = parts.slice(1).join(':').trim();
+                const formatted = formatPhone(num);
+                
+                // Prioritize: CELL/MOBILE > PREF > anything else
+                if (!phone || typeInfo.includes('CELL') || typeInfo.includes('MOBILE')) {
+                    phone = formatted;
+                    // If we found a mobile number, we can stop looking
+                    if (typeInfo.includes('CELL') || typeInfo.includes('MOBILE')) break;
+                } else if (typeInfo.includes('PREF') && (!phone || !phone.includes('CELL'))) {
+                    phone = formatted;
+                }
             }
         } else if (line.startsWith('BDAY')) {
             const parts = line.split(':');
