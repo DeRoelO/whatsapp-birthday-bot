@@ -1,0 +1,111 @@
+<%- include('partials/header') %>
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="fw-bold">Instellingen</h2>
+        <p class="text-muted">Configureer de bot, inloggegevens, en tijdschema's direct vanuit hier.</p>
+    </div>
+</div>
+
+<% if (typeof saved !== 'undefined' && saved === 'true') { %>
+<div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+    <strong>Gelukt!</strong> Je instellingen zijn succesvol opgeslagen!
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+<% } %>
+
+<div class="row justify-content-center pb-5">
+    <div class="col-md-8">
+        <form action="/settings" method="POST">
+            <!-- SCHEDULER SETTINGS -->
+            <div class="card border-0 shadow-sm mb-4 bg-white rounded-3">
+                <div class="card-header bg-primary text-white py-3">
+                    <h5 class="mb-0"><i class="fas fa-robot me-2"></i> Automatisering & Bot Status</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="form-check form-switch fs-5 mb-3">
+                        <input class="form-check-input" type="checkbox" role="switch" id="scheduler_enabled" name="scheduler_enabled" value="true" <%= config.scheduler_enabled === 'true' ? 'checked' : '' %>>
+                        <label class="form-check-label" for="scheduler_enabled">Activeer automatische dagschema's (via verzendslot)</label>
+                    </div>
+                    <div class="form-check form-switch fs-5 mb-3">
+                        <input class="form-check-input" type="checkbox" role="switch" id="include_age" name="include_age" value="true" <%= config.include_age === 'true' ? 'checked' : '' %>>
+                        <label class="form-check-label" for="include_age">Vermeld de berekenende [LEEFTIJD] indien beschikbaar in de contact info.</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARDDAV SETTINGS -->
+            <div class="card border-0 shadow-sm mb-4 bg-white rounded-3">
+                <div class="card-header bg-dark text-white py-3">
+                    <h5 class="mb-0"><i class="fab fa-apple me-2"></i> iCloud Sync Informatie</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">iCloud Server URL (CardDAV)</label>
+                        <input type="url" class="form-control" name="carddav_url" value="<%= config.carddav_url %>" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Apple ID (Emailadres)</label>
+                        <input type="email" class="form-control" name="carddav_username" value="<%= config.carddav_username %>" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">App-Specifiek Wachtwoord</label>
+                        <input type="password" class="form-control" name="carddav_password" value="<%= config.carddav_password %>" placeholder="••••••••••••••" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TIME SCHEDULER SETTINGS -->
+            <div class="card border-0 shadow-sm mb-4 bg-white rounded-3">
+                <div class="card-header bg-success text-white py-3">
+                    <h5 class="mb-0"><i class="fas fa-clock me-2"></i> Verzendtijden</h5>
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-muted small mb-4">De bot zal elke ochtend willekeurig ergens in deze 'windows' een tijdslot opzoeken om als een echt mens aan te voelen.</p>
+                    
+                    <h6 class="fw-bold">Doordeweeks (Ma-Vr)</h6>
+                    <div class="row align-items-center mb-4">
+                        <div class="col-md-5">
+                            <input type="time" class="form-control" name="weekday_start" value="<%= config.weekday_start %>">
+                        </div>
+                        <div class="col-md-2 text-center text-muted">tot</div>
+                        <div class="col-md-5">
+                            <input type="time" class="form-control" name="weekday_end" value="<%= config.weekday_end %>">
+                        </div>
+                    </div>
+                    
+                    <h6 class="fw-bold">Weekend (Za-Zo)</h6>
+                    <div class="row align-items-center mb-3">
+                        <div class="col-md-5">
+                            <input type="time" class="form-control" name="weekend_start" value="<%= config.weekend_start %>">
+                        </div>
+                        <div class="col-md-2 text-center text-muted">tot</div>
+                        <div class="col-md-5">
+                            <input type="time" class="form-control" name="weekend_end" value="<%= config.weekend_end %>">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TEMPLATE SETTINGS -->
+            <div class="card border-0 shadow-sm mb-4 bg-white rounded-3">
+                <div class="card-header bg-info text-white py-3">
+                    <h5 class="mb-0"><i class="fas fa-quote-right me-2"></i> Bericht Templates</h5>
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-muted small">Scheid de verschillende suggesties door ze op een <strong>nieuwe regel (enter)</strong> te zetten. Gebruik <code>[NAAM]</code> en <code>[LEEFTIJD]</code> als variabelen.</p>
+                    
+                    <h6 class="fw-bold mt-4">🎂 Berichten mét leeftijd (indien bekend)</h6>
+                    <textarea class="form-control mb-4" name="templates_with_age" rows="4" required><%= config.templates_with_age %></textarea>
+
+                    <h6 class="fw-bold">🎈 Berichten zónder leeftijd (als reservecopy of onbekend)</h6>
+                    <textarea class="form-control mb-2" name="templates_without_age" rows="4" required><%= config.templates_without_age %></textarea>
+                </div>
+            </div>
+
+            <div class="d-grid mb-5">
+                <button type="submit" class="btn btn-primary btn-lg shadow-sm"><i class="fas fa-save me-2"></i> Sla instellingen op</button>
+            </div>
+        </form>
+    </div>
+</div>
+<%- include('partials/footer') %>

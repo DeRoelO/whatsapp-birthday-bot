@@ -1,0 +1,59 @@
+<%- include('partials/header') %>
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="fw-bold">Verzonden Berichten</h2>
+        <p class="text-muted">Geschiedenis van recent verstuurde of gepoogde berichtjes.</p>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm bg-white rounded-3">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Tijdstip</th>
+                        <th>Ontvanger</th>
+                        <th style="min-width: 300px;">Bericht</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (!logs || logs.length === 0) { %>
+                        <tr>
+                            <td colspan="4" class="text-center py-5 text-muted">
+                                <i class="fas fa-comment-slash mb-2 fa-2x"></i><br>
+                                Geen berichten verzonden.
+                            </td>
+                        </tr>
+                    <% } else { %>
+                        <% logs.forEach(log => { %>
+                            <tr>
+                                <td class="ps-4 py-3">
+                                    <% const lDate = new Date(log.sent_at); %>
+                                    <strong><%= lDate.toLocaleDateString('nl-NL') %></strong><br>
+                                    <small class="text-muted"><%= lDate.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }) %></small>
+                                </td>
+                                <td>
+                                    <strong><%= log.name %></strong>
+                                    <br><small class="text-muted"><%= log.phone %></small>
+                                </td>
+                                <td>
+                                    <p class="mb-0 text-break text-muted" style="font-size: 0.95rem; white-space: pre-wrap;"><%= log.message %></p>
+                                </td>
+                                <td>
+                                    <% if (log.status === 'success') { %>
+                                        <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2"><i class="fas fa-check me-1"></i> Verzonden</span>
+                                    <% } else { %>
+                                        <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-2" title="Error"><i class="fas fa-times me-1"></i> Mislukt</span>
+                                    <% } %>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<%- include('partials/footer') %>

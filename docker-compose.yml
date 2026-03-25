@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  bot:
+    build: .
+    container_name: whatsapp-birthday-bot
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+      - ./.wwebjs_auth:/app/.wwebjs_auth
+    environment:
+      # --- iCloud CardDAV ---
+      # Vul hier je Apple ID en eventueel App-Specifiek Wachtwoord direct in.
+      - CARDDAV_URL=https://contacts.icloud.com/
+      - CARDDAV_USERNAME=JOUW_APPLE_ID@icloud.com
+      - CARDDAV_PASSWORD=JOUW_APP_SPECIFIEK_WACHTWOORD
+      
+      # --- Webserver ---
+      - PORT=3000
+      - TIMEZONE=Europe/Amsterdam
+      
+      # --- Bericht Instellingen ---
+      # INCLUDE_AGE bepaalt of [LEEFTIJD] wordt vervangen als de leeftijd bekend is. 
+      # "true" = wel gebruiken, "false" = helemaal nooit hanteren.
+      - INCLUDE_AGE=true
+      
+      # Tijdstippen (UU:MM) waartussen een willekeurige verzendtijd wordt gekozen.
+      - SCHEDULE_WEEKDAY_START=06:30
+      - SCHEDULE_WEEKDAY_END=07:30
+      - SCHEDULE_WEEKEND_START=08:30
+      - SCHEDULE_WEEKEND_END=09:30
+      
+      # Berichten (gescheiden door het '|' teken). Je kunt er zoveel toevoegen als je wil.
+      # Speciale tekens mogelijk: [NAAM] en [LEEFTIJD]
+      - "MESSAGE_TEMPLATES=Hoi [NAAM], van harte gefeliciteerd met je [LEEFTIJD] verjaardag! 🎉|Gefeliciteerd [NAAM]! 🎂 Ik wens je een hele fijne [LEEFTIJD] verjaardag toe.|Hey [NAAM]! Van harte gefeliciteerd! 🎈 [LEEFTIJD] jaar alweer, geniet ervan!|Een hele gelukkige [LEEFTIJD] verjaardag gewenst, [NAAM]! 🎁|Proficiat [NAAM]! 🥳 Hopelijk heb je een geweldige [LEEFTIJD] verjaardag vandaag."

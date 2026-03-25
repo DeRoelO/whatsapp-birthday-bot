@@ -1,0 +1,68 @@
+<%- include('partials/header') %>
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="fw-bold">Verjaardagskalender</h2>
+        <p class="text-muted">Aankomende verjaardagen in de komende 60 dagen.</p>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm bg-white rounded-3">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Contact</th>
+                        <th>Telefoon</th>
+                        <th>Oorspronkelijke Datum</th>
+                        <th>Komende Verjaardag</th>
+                        <th>Leeftijd (Wordt)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (!upcoming || upcoming.length === 0) { %>
+                        <tr>
+                            <td colspan="5" class="text-center py-5 text-muted">
+                                <i class="fas fa-calendar-times mb-2 fa-2x"></i><br>
+                                Geen komende verjaardagen gevonden.
+                            </td>
+                        </tr>
+                    <% } else { %>
+                        <% upcoming.forEach(contact => { %>
+                            <tr>
+                                <td class="ps-4 py-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-circle me-3">
+                                            <%= contact.name ? contact.name.charAt(0).toUpperCase() : '?' %>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0 fw-bold"><%= contact.name %></h6>
+                                            <% if (contact.nickname) { %>
+                                                <small class="text-muted">"<%- contact.nickname %>"</small>
+                                            <% } %>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><%= contact.phone %></td>
+                                <td>
+                                    <%= contact.birth_day %>-<%= contact.birth_month %><% if (contact.birth_year) { %>-<%= contact.birth_year %><% } %>
+                                </td>
+                                <td>
+                                    <strong><%= contact.next_birthday_date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }) %></strong>
+                                </td>
+                                <td>
+                                    <% if (contact.age !== null) { %>
+                                        <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2"><%= contact.age %> jaar</span>
+                                    <% } else { %>
+                                        <span class="text-muted fst-italic">Onbekend</span>
+                                    <% } %>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<%- include('partials/footer') %>
