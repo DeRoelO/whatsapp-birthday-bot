@@ -99,6 +99,15 @@ const parseVCard = (vcardString, remoteId) => {
         }
     }
 
+    if (birth_year !== null) {
+        const currentYear = new Date().getFullYear();
+        const age = currentYear - birth_year;
+        // Sanity check: ignore implausible years (e.g., Apple's default 1604, or year = current year)
+        if (age < 12 || age > 90) {
+            birth_year = null;
+        }
+    }
+
     return {
         remote_id: remoteId,
         name,

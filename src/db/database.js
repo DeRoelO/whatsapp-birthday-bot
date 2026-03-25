@@ -171,24 +171,34 @@ export const getUpcomingBirthdays = async (days = 30) => {
     
     const today = new Date();
     today.setHours(0,0,0,0);
-    const in30Days = new Date(today.getTime() + days * 24 * 60 * 60 * 1000);
+    const inNDays = new Date(today.getTime() + days * 24 * 60 * 60 * 1000);
 
     const upcoming = [];
     for (const c of contacts) {
         let bDateThisYear = new Date(today.getFullYear(), c.birth_month - 1, c.birth_day);
-        
+
         let age = null;
         if (c.birth_year) {
-            age = today.getFullYear() - c.birth_year;
+            const rawAge = today.getFullYear() - c.birth_year;
+            // Sanity check: ignore implausible ages (too old or too young to be a real contact)
+            if (rawAge >= 12 && rawAge <= 90) {
+                age = rawAge;
+            }
         }
 
+        const addContact = (date, ageVal) => {
+            const daysUntil = Math.round((date - today) / (24 * 60 * 60 * 1000));
+            const dateStr = date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'long' });
+            upcoming.push({ ...c, next_birthday_date: date, age: ageVal, daysUntil, dateStr });
+        };
+
         if (bDateThisYear < today) {
-            let nextDate = new Date(today.getFullYear() + 1, c.birth_month - 1, c.birth_day);
-            if (nextDate <= in30Days) {
-                upcoming.push({ ...c, next_birthday_date: nextDate, age: age !== null ? age + 1 : null });
+            const nextDate = new Date(today.getFullYear() + 1, c.birth_month - 1, c.birth_day);
+            if (nextDate <= inNDays) {
+                addContact(nextDate, age !== null ? age + 1 : null);
             }
-        } else if (bDateThisYear <= in30Days) {
-            upcoming.push({ ...c, next_birthday_date: bDateThisYear, age });
+        } else if (bDateThisYear <= inNDays) {
+            addContact(bDateThisYear, age);
         }
     }
 

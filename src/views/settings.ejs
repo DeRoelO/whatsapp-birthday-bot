@@ -108,17 +108,24 @@
 
             <!-- TEMPLATE SETTINGS -->
             <div class="card border-0 shadow-sm mb-4 bg-white rounded-3">
-                <div class="card-header bg-info text-white py-3">
+                <div class="card-header bg-info text-white py-3 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="fas fa-quote-right me-2"></i> Message Templates</h5>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-light me-1" id="btnExportTemplates" title="Export templates as JSON"><i class="fas fa-file-export me-1"></i> Export</button>
+                        <label class="btn btn-sm btn-light mb-0" title="Import templates from JSON">
+                            <i class="fas fa-file-import me-1"></i> Import
+                            <input type="file" id="importTemplatesFile" accept=".json" style="display:none;">
+                        </label>
+                    </div>
                 </div>
                 <div class="card-body p-4">
                     <p class="text-muted small">Separate suggestions by typing them on a <strong>new line (enter)</strong>. Use <code>[NAAM]</code> and <code>[LEEFTIJD]</code> as dynamic variables.</p>
                     
                     <h6 class="fw-bold mt-4">Messages WITH Age (if known)</h6>
-                    <textarea class="form-control mb-4" name="templates_with_age" rows="4" required><%= config.templates_with_age %></textarea>
+                    <textarea class="form-control mb-4" id="templates_with_age" name="templates_with_age" rows="4" required><%= config.templates_with_age %></textarea>
 
                     <h6 class="fw-bold">Messages WITHOUT Age (fallback/unknown age)</h6>
-                    <textarea class="form-control mb-2" name="templates_without_age" rows="4" required><%= config.templates_without_age %></textarea>
+                    <textarea class="form-control mb-2" id="templates_without_age" name="templates_without_age" rows="4" required><%= config.templates_without_age %></textarea>
                 </div>
             </div>
 
@@ -193,6 +200,33 @@
             btn.innerHTML = ogText;
             btn.disabled = false;
         }
+    });
+    document.getElementById('btnExportTemplates').addEventListener('click', () => {
+        const data = {
+            templates_with_age: document.getElementById('templates_with_age').value,
+            templates_without_age: document.getElementById('templates_without_age').value
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'birthday-bot-templates.json';
+        a.click();
+    });
+
+    document.getElementById('importTemplatesFile').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            try {
+                const data = JSON.parse(ev.target.result);
+                if (data.templates_with_age) document.getElementById('templates_with_age').value = data.templates_with_age;
+                if (data.templates_without_age) document.getElementById('templates_without_age').value = data.templates_without_age;
+                alert('Templates imported successfully! Don\'t forget to click Save Settings.');
+            } catch { alert('Invalid JSON file.'); }
+        };
+        reader.readAsText(file);
+        e.target.value = '';
     });
 </script>
 
