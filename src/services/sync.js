@@ -26,8 +26,8 @@ export const syncContacts = async () => {
             return { success: false, error: 'No address books found' };
         }
 
-        let totalSynced = 0;
-        const allContacts = [];
+        let totalProcessed = 0;
+        const rawContacts = [];
 
         for (const ab of addressBooks) {
             console.log(`Sync: Fetching address book: ${ab.url}`);
@@ -35,62 +35,69 @@ export const syncContacts = async () => {
 
             for (const item of vcards) {
                 const contact = parseVCard(item.data, item.url);
-                if (contact && contact.phone && contact.birth_day && contact.birth_month) {
-                    allContacts.push(contact);
+                if (contact) {
+                    rawContacts.push(contact);
                 }
             }
         }
 
-        // --- Option C: Smart Deduplication ---
-        // Group by birthday (Month-Day)
-        const groups = {};
-        for (const c of allContacts) {
-            const key = `${c.birth_month}-${c.birth_day}`;
-            if (!groups[key]) groups[key] = [];
-            groups[key].push(c);
-        }
+        // --- Option C v2: Smart Merging ---
+        const mergedPeople = [];
+        
+        const getWords = (n) => n.toLowerCase().replace(/[^a-z0-9 ]/g, '').split(/\s+/).filter(w => w.length > 1);
 
-        const normalized = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-        const cleanedContacts = [];
-        for (const key in groups) {
-            const candidates = groups[key];
-            // Sort by name length descending (longest name first)
-            candidates.sort((a, b) => b.name.length - a.name.length);
-
-            const kept = [];
-            for (const cand of candidates) {
-                const normCand = normalized(cand.name);
-                const isDuplicate = kept.some(k => {
-                    const normK = normalized(k.name);
-                    return normK.includes(normCand) || normCand.includes(normK);
-                });
-
-                if (!isDuplicate) {
-                    kept.push(cand);
-                    cleanedContacts.push(cand);
-                } else {
-                    console.log(`Sync: Deduplicated "${cand.name}" as it matches "${kept.find(k => normalized(k.name).includes(normCand) || normCand.includes(normalized(k.name))).name}"`);
+        for (const parsed of rawContacts) {
+            const w2 = getWords(parsed.name);
+            
+            // Find existing person to merge with
+            let match = mergedPeople.find(p => {
+                const w1 = getWords(p.name);
+                // Match if first two words are identical (e.g. "Jan Janssen")
+                if (w1.length >= 2 && w2.length >= 2) {
+                    return w1[0] === w2[0] && w1[1] === w2[1];
                 }
+                // Fallback for identical single names
+                if (w1.length === 1 && w2.length === 1) {
+                    return w1[0] === w2[0];
+                }
+                return false;
+            });
+
+            if (match) {
+                console.log(`Sync: Merging "${parsed.name}" into master record "${match.name}"`);
+                // Merge data: newest/longest name wins, but keep birthday/phone if available
+                if (parsed.name.length > match.name.length) match.name = parsed.name;
+                if (!match.phone && parsed.phone) match.phone = parsed.phone;
+                if (!match.birth_day && parsed.birth_day) {
+                    match.birth_day = parsed.birth_day;
+                    match.birth_month = parsed.birth_month;
+                    match.birth_year = parsed.birth_year;
+                }
+                // Keep the original remote_id for cleanup tracking
+            } else {
+                mergedPeople.push(parsed);
             }
         }
+
+        // Only keep those that have BOTH a phone and a birthday
+        const finalContacts = mergedPeople.filter(p => p.phone && p.birth_day && p.birth_month);
 
         const syncedRemoteIds = [];
-        for (const contact of cleanedContacts) {
+        for (const contact of finalContacts) {
             await upsertContact(contact);
             syncedRemoteIds.push(contact.remote_id);
-            totalSynced++;
+            totalProcessed++;
         }
 
-        // Cleanup: Remove contacts that were NOT in this sync (filtered out by deduplication or deleted from iCloud)
+        // Cleanup: Remove contacts that were NOT in this sync (filtered out by merging or deleted from iCloud)
         if (syncedRemoteIds.length > 0) {
             const placeholders = syncedRemoteIds.map(() => '?').join(',');
             await run(`DELETE FROM contacts WHERE remote_id NOT IN (${placeholders})`, syncedRemoteIds);
         }
 
-        console.log(`Sync: Synchronization finished. Processed ${totalSynced} unique contacts with phone numbers.`);
+        console.log(`Sync: Synchronization finished. Processed ${totalProcessed} unique merged contacts.`);
         await setSetting('last_sync', new Date().toISOString());
-        return { success: true, count: totalSynced };
+        return { success: true, count: totalProcessed };
     } catch (err) {
         console.error('Sync: Error during synchronization:', err);
         return { success: false, error: err.message };
