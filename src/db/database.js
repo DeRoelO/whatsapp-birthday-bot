@@ -53,8 +53,27 @@ db.serialize(() => {
     db.run(`CREATE TABLE IF NOT EXISTS settings (
         key TEXT PRIMARY KEY,
         value TEXT
+    )`);
+
+    // Manual Merges table (Master/Slave relationship)
+    db.run(`CREATE TABLE IF NOT EXISTS manual_merges (
+        master_id INTEGER,
+        slave_id INTEGER UNIQUE,
+        PRIMARY KEY(master_id, slave_id),
+        FOREIGN KEY (master_id) REFERENCES contacts (id),
+        FOREIGN KEY (slave_id) REFERENCES contacts (id)
+    )`);
+
+    // Merge Suggestions table
+    db.run(`CREATE TABLE IF NOT EXISTS merge_suggestions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        contact_a_id INTEGER,
+        contact_b_id INTEGER,
+        status TEXT DEFAULT 'pending',
+        UNIQUE(contact_a_id, contact_b_id),
+        FOREIGN KEY (contact_a_id) REFERENCES contacts (id),
+        FOREIGN KEY (contact_b_id) REFERENCES contacts (id)
     )`, () => {
-        // Resolve the promise once the last table is definitively created
         dbReadyResolve();
     });
 });
@@ -134,11 +153,65 @@ export const getBirthdayContactsToday = async () => {
     const month = today.getMonth() + 1;
     const year = today.getFullYear();
     
-    return await all(
-        `SELECT * FROM contacts 
-         WHERE birth_day = ? AND birth_month = ? 
-         AND (last_message_year IS NULL OR last_message_year < ?)`,
-        [day, month, year]
+    // 1. Get all IDs of contacts who have a birthday today
+    const birthdayPeople = await all(
+        `SELECT id FROM contacts WHERE birth_day = ? AND birth_month = ?`,
+        [day, month]
+    );
+    if (birthdayPeople.length === 0) return [];
+
+    const birthdayIds = birthdayPeople.map(p => p.id);
+
+    // 2. Find all related IDs (Masters and Slaves of those who have a birthday)
+    // We want: The birthday person itself, their master (if they are a slave), and all their slaves (if they are a master)
+    const relatedIds = new Set(birthdayIds);
+    
+    // Find masters of these birthday people
+    const masters = await all(`SELECT master_id FROM manual_merges WHERE slave_id IN (${birthdayIds.map(() => '?').join(',')})`, birthdayIds);
+    masters.forEach(m => relatedIds.add(m.master_id));
+
+    // Find slaves of these birthday people (and their masters)
+    const allIdsArray = Array.from(relatedIds);
+    const slaves = await all(`SELECT slave_id FROM manual_merges WHERE master_id IN (${allIdsArray.map(() => '?').join(',')})`, allIdsArray);
+    slaves.forEach(s => relatedIds.add(s.slave_id));
+
+    // 3. Fetch all data for this entire "cluster" of people
+    const clusterIds = Array.from(relatedIds);
+    const clusterData = await all(
+        `SELECT c.*, m.master_id FROM contacts c 
+         LEFT JOIN manual_merges m ON c.id = m.slave_id
+         WHERE c.id IN (${clusterIds.map(() => '?').join(',')})`,
+        clusterIds
+    );
+
+    // 4. Group by Master
+    const results = new Map();
+    for (const c of clusterData) {
+        const effectiveMasterId = c.master_id || c.id;
+        
+        let m = results.get(effectiveMasterId);
+        if (!m) {
+            // Find the actual master record in clusterData
+            m = clusterData.find(d => d.id === effectiveMasterId) || { ...c, id: effectiveMasterId, master_id: null };
+            results.set(effectiveMasterId, { ...m });
+            m = results.get(effectiveMasterId);
+        }
+
+        // Aggregate data into master
+        if (!m.phone && c.phone) m.phone = c.phone;
+        if (!m.birth_day && c.birth_day) {
+            m.birth_day = c.birth_day;
+            m.birth_month = c.birth_month;
+            m.birth_year = c.birth_year;
+        }
+    }
+
+    // 5. Filter for those who actually have a birthday today AND a phone, and aren't double-sent
+    return Array.from(results.values()).filter(p => 
+        p.phone && 
+        p.birth_day === day && 
+        p.birth_month === month && 
+        (p.last_message_year === null || p.last_message_year < year)
     );
 };
 
@@ -208,6 +281,48 @@ export const getUpcomingBirthdays = async (days = 30) => {
 
     upcoming.sort((a, b) => a.next_birthday_date - b.next_birthday_date);
     return upcoming;
+};
+
+// --- Contact Management Helpers ---
+
+export const addManualMerge = async (masterId, slaveId) => {
+    await run(`INSERT OR REPLACE INTO manual_merges (master_id, slave_id) VALUES (?, ?)`, [masterId, slaveId]);
+    await run(`UPDATE merge_suggestions SET status = 'approved' WHERE (contact_a_id = ? AND contact_b_id = ?) OR (contact_a_id = ? AND contact_b_id = ?)`, [masterId, slaveId, slaveId, masterId]);
+};
+
+export const removeManualMerge = async (slaveId) => {
+    await run(`DELETE FROM manual_merges WHERE slave_id = ?`, [slaveId]);
+};
+
+export const getManualMerges = async () => {
+    return await all(`
+        SELECT m.*, c1.name as master_name, c2.name as slave_name 
+        FROM manual_merges m
+        JOIN contacts c1 ON m.master_id = c1.id
+        JOIN contacts c2 ON m.slave_id = c2.id
+    `);
+};
+
+export const getMergeSuggestions = async () => {
+    return await all(`
+        SELECT s.*, c1.name as name_a, c1.phone as phone_a, c2.name as name_b, c2.phone as phone_b
+        FROM merge_suggestions s
+        JOIN contacts c1 ON s.contact_a_id = c1.id
+        JOIN contacts c2 ON s.contact_b_id = c2.id
+        WHERE s.status = 'pending'
+    `);
+};
+
+export const addMergeSuggestion = async (idA, idB) => {
+    await run(`INSERT OR IGNORE INTO merge_suggestions (contact_a_id, contact_b_id) VALUES (?, ?)`, [idA, idB]);
+};
+
+export const updateSuggestionStatus = async (id, status) => {
+    await run(`UPDATE merge_suggestions SET status = ? WHERE id = ?`, [status, id]);
+};
+
+export const deleteContact = async (id) => {
+    await run(`DELETE FROM contacts WHERE id = ?`, [id]);
 };
 
 export default db;

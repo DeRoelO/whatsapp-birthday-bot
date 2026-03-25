@@ -1,0 +1,204 @@
+<%- include('partials/header') %>
+
+<div class="row">
+    <div class="col-12 mb-4">
+        <h2 class="fw-bold">Contact Management</h2>
+        <p class="text-muted">Manage merge suggestions and manual contact links.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0 pt-4 px-4">
+                <ul class="nav nav-tabs card-header-tabs" id="contactTabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active fw-bold" id="suggestions-tab" data-bs-toggle="tab" data-bs-target="#suggestions" type="button">Suggestions <span class="badge bg-primary ms-1"><%= suggestions.length %></span></button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link fw-bold" id="merges-tab" data-bs-toggle="tab" data-bs-target="#merges" type="button">Active Merges <span class="badge bg-secondary ms-1"><%= manualMerges.length %></span></button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link fw-bold" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button">All Contacts</button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body p-4">
+                <div class="tab-content" id="contactTabsContent">
+                    <!-- Suggestions Tab -->
+                    <div class="tab-pane fade show active" id="suggestions" role="tabpanel">
+                        <% if (suggestions.length === 0) { %>
+                            <div class="text-center py-5">
+                                <i class="fas fa-magic fa-3x text-muted mb-3 opacity-25"></i>
+                                <p class="text-muted">No new merge suggestions. Everything is clean!</p>
+                            </div>
+                        <% } else { %>
+                            <div class="list-group list-group-flush">
+                                <% suggestions.forEach(s => { %>
+                                    <div class="list-group-item border-0 mb-3 bg-light rounded shadow-sm p-3 suggestion-row" id="suggestion-<%= s.id %>">
+                                        <div class="row align-items-center text-center text-md-start">
+                                            <div class="col-md-5">
+                                                <h6 class="mb-0 fw-bold"><%= s.name_a %></h6>
+                                                <small class="text-muted"><%= s.phone_a || 'No phone' %></small>
+                                            </div>
+                                            <div class="col-md-2 py-2 py-md-0 text-center text-muted">
+                                                <i class="fas fa-arrows-left-right fa-lg opacity-50"></i>
+                                            </div>
+                                            <div class="col-md-5">
+                                                <h6 class="mb-0 fw-bold"><%= s.name_b %></h6>
+                                                <small class="text-muted"><%= s.phone_b || 'No phone' %></small>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3">
+                                            <div class="col-12 text-center text-md-end">
+                                                <button class="btn btn-sm btn-success px-4" onclick="approveMerge(<%= s.id %>, <%= s.contact_a_id %>, <%= s.contact_b_id %>, '<%= s.name_a %>', '<%= s.name_b %>')">
+                                                    <i class="fas fa-check me-1"></i> Approve Merge
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-secondary ms-2" onclick="ignoreSuggestion(<%= s.id %>)">
+                                                    <i class="fas fa-times me-1"></i> Ignore
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <% }) %>
+                            </div>
+                        <% } %>
+                    </div>
+
+                    <!-- Active Merges Tab -->
+                    <div class="tab-pane fade" id="merges" role="tabpanel">
+                        <% if (manualMerges.length === 0) { %>
+                            <div class="text-center py-5">
+                                <i class="fas fa-link-slash fa-3x text-muted mb-3 opacity-25"></i>
+                                <p class="text-muted">No manual merges active yet.</p>
+                            </div>
+                        <% } else { %>
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Master Contact</th>
+                                            <th></th>
+                                            <th>Merged From</th>
+                                            <th class="text-end">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% manualMerges.forEach(m => { %>
+                                            <tr>
+                                                <td><span class="fw-bold"><%= m.master_name %></span></td>
+                                                <td class="text-center text-muted"><i class="fas fa-long-arrow-alt-left"></i></td>
+                                                <td><%= m.slave_name %></td>
+                                                <td class="text-end">
+                                                    <button class="btn btn-sm btn-outline-danger" onclick="unmerge(<%= m.slave_id %>, '<%= m.slave_name %>')">
+                                                        <i class="fas fa-unlink me-1"></i> Unmerge
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        <% }) %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <% } %>
+                    </div>
+
+                    <!-- All Contacts Tab -->
+                    <div class="tab-pane fade" id="all" role="tabpanel">
+                        <div class="input-group mb-4 shadow-sm">
+                            <span class="input-group-text bg-white border-0"><i class="fas fa-search text-muted"></i></span>
+                            <input type="text" id="contactSearch" class="form-control border-0 py-3" placeholder="Search contact names or phone numbers..." onkeyup="filterContacts()">
+                        </div>
+                        <div class="list-group list-group-flush" id="contactList">
+                            <% allContacts.forEach(c => { %>
+                                <div class="list-group-item d-flex justify-content-between align-items-center border-0 mb-1 px-3 py-2 rounded contact-row transition-all">
+                                    <div>
+                                        <h6 class="mb-0 fw-bold"><%= c.name %></h6>
+                                        <p class="text-muted small mb-0"><%= c.phone || 'No phone' %></p>
+                                    </div>
+                                    <div class="text-muted small">
+                                        <i class="fab fa-whatsapp me-1"></i> <%= c.phone ? 'Link Available' : 'Sync Pending' %>
+                                    </div>
+                                </div>
+                            <% }) %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('partials/footer') %>
+
+<script>
+    async function approveMerge(suggestionId, idA, idB, nameA, nameB) {
+        // Simple logic: pick the LONGER name as the master
+        let masterId = idA;
+        let slaveId = idB;
+        if (nameB.length > nameA.length) {
+            masterId = idB;
+            slaveId = idA;
+        }
+
+        try {
+            const res = await fetch('/api/merges', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ masterId, slaveId })
+            });
+            const data = await res.json();
+            if (data.success) {
+                const row = document.getElementById(`suggestion-${suggestionId}`);
+                row.classList.add('fade-out');
+                setTimeout(() => location.reload(), 500);
+            } else {
+                alert('Error: ' + data.error);
+            }
+        } catch (err) {
+            alert('Error merging: ' + err.message);
+        }
+    }
+
+    async function ignoreSuggestion(id) {
+        try {
+            const res = await fetch(`/api/suggestions/${id}/ignore`, { method: 'POST' });
+            if (res.ok) {
+                const row = document.getElementById(`suggestion-${id}`);
+                row.remove();
+                // Check if any left
+                if (document.querySelectorAll('.suggestion-row').length === 0) {
+                    location.reload();
+                }
+            }
+        } catch (err) {
+            alert('Error ignoring suggestion');
+        }
+    }
+
+    async function unmerge(slaveId, slaveName) {
+        if (!confirm(`Are you sure you want to restore "${slaveName}" as a separate contact?`)) return;
+        
+        try {
+            const res = await fetch(`/api/merges/${slaveId}`, { method: 'DELETE' });
+            if (res.ok) location.reload();
+        } catch (err) {
+            alert('Error unmerging');
+        }
+    }
+
+    function filterContacts() {
+        const val = document.getElementById('contactSearch').value.toLowerCase();
+        document.querySelectorAll('.contact-row').forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(val) ? 'flex' : 'none';
+        });
+    }
+</script>
+
+<style>
+    .transition-all { transition: all 0.2s ease; }
+    .contact-row:hover { background-color: #f1f3f5 !important; cursor: default; }
+    .nav-tabs .nav-link { border: none; color: #6c757d; border-radius: 0; padding: 12px 20px; }
+    .nav-tabs .nav-link.active { color: #198754; border-bottom: 3px solid #198754; background: none; }
+    .fade-out { opacity: 0; transform: translateX(20px); transition: all 0.5s ease; }
+</style>

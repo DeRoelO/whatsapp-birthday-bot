@@ -1,5 +1,5 @@
 import { createDAVClient } from 'tsdav';
-import { upsertContact, getSetting, setSetting, run } from '../db/database.js';
+import { upsertContact, getSetting, setSetting, run, getAllContacts, addMergeSuggestion, get } from '../db/database.js';
 
 export const syncContacts = async () => {
     const url = (await getSetting('carddav_url')) || process.env.CARDDAV_URL;
@@ -41,61 +41,50 @@ export const syncContacts = async () => {
             }
         }
 
-        // --- Option C v2: Smart Merging ---
-        const mergedPeople = [];
-        
-        const getWords = (n) => n.toLowerCase().replace(/[^a-z0-9 ]/g, '').split(/\s+/).filter(w => w.length > 1);
-
-        for (const parsed of rawContacts) {
-            const w2 = getWords(parsed.name);
-            
-            // Find existing person to merge with
-            let match = mergedPeople.find(p => {
-                const w1 = getWords(p.name);
-                // Match if first two words are identical (e.g. "Jan Janssen")
-                if (w1.length >= 2 && w2.length >= 2) {
-                    return w1[0] === w2[0] && w1[1] === w2[1];
-                }
-                // Fallback for identical single names
-                if (w1.length === 1 && w2.length === 1) {
-                    return w1[0] === w2[0];
-                }
-                return false;
-            });
-
-            if (match) {
-                console.log(`Sync: Merging "${parsed.name}" into master record "${match.name}"`);
-                // Merge data: newest/longest name wins, but keep birthday/phone if available
-                if (parsed.name.length > match.name.length) match.name = parsed.name;
-                if (!match.phone && parsed.phone) match.phone = parsed.phone;
-                if (!match.birth_day && parsed.birth_day) {
-                    match.birth_day = parsed.birth_day;
-                    match.birth_month = parsed.birth_month;
-                    match.birth_year = parsed.birth_year;
-                }
-                // Keep the original remote_id for cleanup tracking
-            } else {
-                mergedPeople.push(parsed);
-            }
-        }
-
-        // Only keep those that have BOTH a phone and a birthday
-        const finalContacts = mergedPeople.filter(p => p.phone && p.birth_day && p.birth_month);
-
         const syncedRemoteIds = [];
-        for (const contact of finalContacts) {
-            await upsertContact(contact);
+        for (const contact of rawContacts) {
+            const id = await upsertContact(contact);
             syncedRemoteIds.push(contact.remote_id);
             totalProcessed++;
         }
 
-        // Cleanup: Remove contacts that were NOT in this sync (filtered out by merging or deleted from iCloud)
+        // --- Suggestion Logic (Option C v2 refined) ---
+        console.log('Sync: Analyzing contacts for merge suggestions...');
+        const dbContacts = await getAllContacts(); // We need IDs for suggestions
+        const getWords = (n) => n.toLowerCase().replace(/[^a-z0-9 ]/g, '').split(/\s+/).filter(w => w.length > 1);
+        
+        for (let i = 0; i < dbContacts.length; i++) {
+            for (let j = i + 1; j < dbContacts.length; j++) {
+                const c1 = dbContacts[i];
+                const c2 = dbContacts[j];
+                
+                const w1 = getWords(c1.name);
+                const w2 = getWords(c2.name);
+                
+                let match = false;
+                if (w1.length >= 2 && w2.length >= 2) {
+                    match = (w1[0] === w2[0] && w1[1] === w2[1]);
+                } else if (w1.length === 1 && w2.length === 1) {
+                    match = (w1[0] === w2[0]);
+                }
+
+                if (match) {
+                    // Check if already merged
+                    const existingMerge = await get(`SELECT master_id FROM manual_merges WHERE (master_id = ? AND slave_id = ?) OR (master_id = ? AND slave_id = ?)`, [c1.id, c2.id, c2.id, c1.id]);
+                    if (!existingMerge) {
+                        await addMergeSuggestion(c1.id, c2.id);
+                    }
+                }
+            }
+        }
+
+        // Cleanup: Remove contacts that were NOT in this sync
         if (syncedRemoteIds.length > 0) {
             const placeholders = syncedRemoteIds.map(() => '?').join(',');
             await run(`DELETE FROM contacts WHERE remote_id NOT IN (${placeholders})`, syncedRemoteIds);
         }
 
-        console.log(`Sync: Synchronization finished. Processed ${totalProcessed} unique merged contacts.`);
+        console.log(`Sync: Synchronization finished. Processed ${totalProcessed} contacts.`);
         await setSetting('last_sync', new Date().toISOString());
         return { success: true, count: totalProcessed };
     } catch (err) {

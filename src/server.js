@@ -2,7 +2,11 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import * as wa from './services/whatsapp.js';
-import { getStats, getLogs, getSetting, getAllSettings, getUpcomingBirthdays, addLog, setSetting, getAllContacts } from './db/database.js';
+import { 
+    getStats, getLogs, getSetting, getAllSettings, getUpcomingBirthdays, 
+    addLog, setSetting, getAllContacts, getMergeSuggestions, getManualMerges,
+    addManualMerge, removeManualMerge, updateSuggestionStatus 
+} from './db/database.js';
 import { checkAndScheduleBirthdays } from './services/birthday.js';
 import { syncContacts } from './services/sync.js';
 
@@ -137,6 +141,59 @@ app.post('/api/test-message', async (req, res) => {
         res.json({ success: true });
     } catch (err) {
         if (phone) await addLog(null, phone, 'Test Message', text, `failed: ${err.message}`);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// Contacts Management Page
+app.get('/contacts', async (req, res) => {
+    try {
+        const stats = await getStats();
+        const lastSync = await getSetting('last_sync', 'Never');
+        const suggestions = await getMergeSuggestions();
+        const manualMerges = await getManualMerges();
+        const allContacts = await getAllContacts();
+
+        res.render('contacts', {
+            stats,
+            lastSync,
+            suggestions,
+            manualMerges,
+            allContacts,
+            page: 'contacts'
+        });
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
+
+// API: Approve Merge
+app.post('/api/merges', async (req, res) => {
+    try {
+        const { masterId, slaveId } = req.body;
+        await addManualMerge(masterId, slaveId);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// API: Unmerge
+app.delete('/api/merges/:slaveId', async (req, res) => {
+    try {
+        await removeManualMerge(req.params.slaveId);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// API: Ignore Suggestion
+app.post('/api/suggestions/:id/ignore', async (req, res) => {
+    try {
+        await updateSuggestionStatus(req.params.id, 'ignored');
+        res.json({ success: true });
+    } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
 });
