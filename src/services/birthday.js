@@ -3,9 +3,9 @@ import { getBirthdayContactsToday, addLog, updateLastMessageYear, getSetting } f
 import { sendMessage } from './whatsapp.js';
 
 const DEFAULT_TEMPLATES = [
-    "Hi [NAAM], wishing you a very happy [LEEFTIJD]th birthday! 🎉 Have a great day!",
-    "Happy Birthday [NAAM]! 🎂 I hope you have a wonderful [LEEFTIJD]th birthday.",
-    "Hey [NAAM]! Happy birthday! 🎈 [LEEFTIJD] years already, enjoy it!"
+    "Hi [NAME], wishing you a very happy [AGE]th birthday! 🎉 Have a great day!",
+    "Happy Birthday [NAME]! 🎂 I hope you have a wonderful [AGE]th birthday.",
+    "Hey [NAME]! Happy birthday! 🎈 [AGE] years already, enjoy it!"
 ];
 
 const parseTime = (timeStr, defaultHour, defaultMinute) => {
@@ -72,8 +72,8 @@ export const checkAndScheduleBirthdays = async (forceNow = false) => {
 
     let sentCount = 0;
     
-    const templatesWithAgeStr = await getSetting('templates_with_age', "Hi [NAAM], wishing you a very happy [LEEFTIJD]th birthday!\nHappy Birthday [NAAM]! I hope you have a wonderful [LEEFTIJD]th birthday.");
-    const templatesWithoutAgeStr = await getSetting('templates_without_age', "Hi [NAAM], wishing you a very happy birthday!\nHappy Birthday [NAAM]! I hope you have a wonderful birthday.");
+    const templatesWithAgeStr = await getSetting('templates_with_age', "Hi [NAME], wishing you a very happy [AGE]th birthday!\nHappy Birthday [NAME]! I hope you have a wonderful [AGE]th birthday.");
+    const templatesWithoutAgeStr = await getSetting('templates_without_age', "Hi [NAME], wishing you a very happy birthday!\nHappy Birthday [NAME]! I hope you have a wonderful birthday.");
     
     const templatesWithAge = templatesWithAgeStr.split('\n').map(t => t.trim()).filter(Boolean);
     const templatesWithoutAge = templatesWithoutAgeStr.split('\n').map(t => t.trim()).filter(Boolean);
@@ -145,7 +145,7 @@ const generateMessage = (contact, currentYear, templatesWithAge, templatesWithou
     
     // Safety fallback
     if (!templates || templates.length === 0) templates = hasAgeInfo ? templatesWithoutAge : templatesWithAge;
-    if (!templates || templates.length === 0) templates = ["Happy Birthday [NAAM]!"];
+    if (!templates || templates.length === 0) templates = ["Happy Birthday [NAME]!"];
     
     const template = templates[Math.floor(Math.random() * templates.length)];
     
@@ -160,12 +160,17 @@ const generateMessage = (contact, currentYear, templatesWithAge, templatesWithou
         ageText = `${age}`;
     }
 
-    let message = template.replace(/\[NAAM\]/g, displayName);
+    let message = template
+        .replace(/\[NAME\]/g, displayName)
+        .replace(/\[NAAM\]/g, displayName);
     
     if (ageText) {
-        message = message.replace(/\[LEEFTIJD\]/g, ageText);
+        message = message
+            .replace(/\[AGE\]/g, ageText)
+            .replace(/\[LEEFTIJD\]/g, ageText);
     } else {
-        message = message.replace(/\s?\[LEEFTIJD\]\w?/g, ''); // Removes [LEEFTIJD] and optional following letter like "e"
+        // Removes [AGE] or [LEEFTIJD] and optional following letter like "e" (for Dutch "20e")
+        message = message.replace(/\s?\[(AGE|LEEFTIJD)\]\w?/g, ''); 
     }
 
     return message.trim();
