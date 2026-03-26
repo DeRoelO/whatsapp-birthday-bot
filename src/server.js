@@ -11,6 +11,8 @@ import {
 import { checkAndScheduleBirthdays } from './services/birthday.js';
 import { syncContacts } from './services/sync.js';
 
+import { translations } from './locales/translations.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -21,6 +23,14 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+// Translation Middleware
+app.use(async (req, res, next) => {
+    const lang = await getSetting('language', 'en');
+    res.locals.t = translations[lang] || translations.en;
+    res.locals.currentLang = lang;
+    next();
+});
 
 app.get('/', async (req, res) => {
     try {
@@ -50,12 +60,6 @@ app.get('/logs', async (req, res) => {
     } catch (err) {
         res.status(500).send(err.message);
     }
-});
-
-app.get('/qr', (req, res) => {
-    const connected = wa.isConnected();
-    const qrCodeUrl = wa.getQrCodeDataUrl();
-    res.render('qr', { connected, qrCodeUrl, page: 'qr' });
 });
 
 // GET Settings Page

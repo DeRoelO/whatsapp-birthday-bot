@@ -8,14 +8,19 @@ It runs completely locally in a Docker container and features a built-in Express
 
 ## Features
 
+- **Multi-Language GUI:** Support for both **English** and **Dutch**. Toggle language instantly from the Settings page.
 - **Zero-Config Startup:** Just spin up the Docker container. All configurations are handled through a friendly Web UI.
 - **iCloud (CardDAV) Sync:** Automatically fetches your contacts periodically to make sure nobody is left out.
-- **Deduplication:** Merges and normalises phone numbers automatically so duplicate contacts won't receive double messages.
+- **Advanced Contact Management:**
+    - **Merge Suggestions:** Automatically identifies duplicate contacts and suggests merges.
+    - **Master Selection:** Choose which contact's details (name/photo) to keep during a merge.
+    - **Ignored Suggestions:** Review and restore previously ignored merge suggestions.
+    - **Enhanced Matching:** Intelligent substring and fuzzy matching to catch variants while avoiding false positives.
 - **Headless WhatsApp Web:** Uses Puppeteer to run WhatsApp securely and seamlessly from a Docker container.
-- **Human-like Timing:** Schedules messages randomly within a configurable realistic timeframe (e.g. 06:30-07:30 on weekdays and 08:30-09:30 on weekends).
-- **Dynamic Messages:** Set multiple template messages. The bot dynamically replaces the `[NAAM]` and `[LEEFTIJD]` variables based on the contact's details. You can provide specific templates for contacts with or without a known age.
-- **Exclusion List:** Blacklist specific contacts (by name or phone number) from ever receiving automated messages.
-- **Web GUI / Dashboard:** A clean Bootstrap 5 web interface. From the GUI you can verify connection status, view a calendar of upcoming birthdays, trigger manual syncs/sends, and edit configuration preferences.
+- **Human-like Timing:** Schedules messages randomly within a configurable realistic timeframe.
+- **Dynamic Messages:** Set multiple template messages. The bot dynamically replaces the `[NAME]` and `[AGE]` variables. Common Dutch placeholders (`[NAAM]`, `[LEEFTIJD]`) are still supported for backward compatibility.
+- **Exclusion List:** Blacklist specific contacts from ever receiving automated messages.
+- **Centralized Dashboard:** A clean Bootstrap 5 web interface. From the GUI you can verify connection status, manage contacts, view logs, and edit preferences.
 
 ---
 
@@ -37,10 +42,15 @@ docker-compose up -d --build
 
 ### 2. Configure via the Web GUI
 1. Open your browser and navigate to the web GUI: `http://localhost:3000`
-2. Go to the **Settings** tab. Fill in your iCloud credentials, set your preferred schedule, and define your message templates.
-3. Go to the **WhatsApp** tab (`http://localhost:3000/qr`).
-4. Open WhatsApp on your smartphone, go to **Linked Devices > Link a Device**, and scan the QR code displayed on the webpage.
-5. Once the QR code is successfully scanned, the status will update to **Connected**. The session and settings are persistently stored inside Docker volumes, meaning they survive container restarts!
+2. Go to the **Settings** tab to:
+    - Fill in your iCloud credentials.
+    - Choose your preferred language (English or Dutch).
+    - Link your WhatsApp account by scanning the QR code displayed in the **WhatsApp Connection** card.
+    - Define your message templates and schedule.
+3. Use the **Contacts** tab to:
+    - Review and approve merge suggestions for duplicate contacts.
+    - Search through all contacts and manage the exclusion list.
+4. The bot will now automatically sync contacts and schedule birthday wishes!
 
 ---
 
