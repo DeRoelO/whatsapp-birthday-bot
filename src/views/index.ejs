@@ -2,20 +2,20 @@
 <div class="row">
     <div class="col-12 mb-4 d-flex justify-content-between align-items-center">
         <div>
-            <h2 class="fw-bold"><%= t.dashboard_title %></h2>
-            <p class="text-muted text-uppercase small fw-bold"><%= t.dashboard_subtitle %></p>
+            <h2 class="fw-bold">Dashboard</h2>
+            <p class="text-muted">Overview of the Automated WhatsApp Birthday Bot.</p>
         </div>
         <div>
-            <button id="btnSync" class="btn btn-outline-primary me-2 shadow-sm"><i class="fas fa-sync-alt me-1"></i> <%= t.sync_contacts %></button>
-            <button id="btnSend" class="btn btn-primary shadow-sm"><i class="fas fa-paper-plane me-1"></i> <%= t.force_run %></button>
+            <button id="btnSync" class="btn btn-outline-primary me-2 shadow-sm"><i class="fas fa-sync-alt me-1"></i> Sync Contacts</button>
+            <button id="btnSend" class="btn btn-primary shadow-sm"><i class="fas fa-paper-plane me-1"></i> Force Run Today's Birthdays</button>
         </div>
     </div>
 </div>
 
 <% if (!settings.carddav_username || !settings.carddav_password) { %>
     <div class="alert alert-warning shadow-sm mb-4 border-0">
-        <h5>🚀 <%= t.welcome_title %></h5>
-        <p class="mb-0"><%= t.welcome_desc %></p>
+        <h5>🚀 Welcome to the WhatsApp Birthday Bot!</h5>
+        <p class="mb-0">It looks like no iCloud credentials have been configured yet. Please go to <strong><a href="/settings" class="alert-link">Settings</a></strong> to enter your CardDAV credentials, and then visit <strong><a href="/qr" class="alert-link">WhatsApp</a></strong> to securely link your phone!</p>
     </div>
 <% } %>
 
@@ -25,14 +25,14 @@
     <div class="col-md-4">
         <div class="card stat-card border-0 shadow-sm h-100">
             <div class="card-body text-center">
-                <h6 class="text-muted text-uppercase fw-bold mb-3"><%= t.wa_connection %></h6>
+                <h6 class="text-muted text-uppercase fw-bold mb-3">WhatsApp Connection</h6>
                 <% if (connected) { %>
                     <div class="display-4 text-success mb-2"><i class="fas fa-check-circle"></i></div>
-                    <h5 class="fw-bold"><%= t.status_connected %></h5>
+                    <h5 class="fw-bold">Connected</h5>
                 <% } else { %>
                     <div class="display-4 text-danger mb-2"><i class="fas fa-times-circle"></i></div>
-                    <h5 class="fw-bold"><%= t.status_disconnected %></h5>
-                    <a href="/settings" class="btn btn-sm btn-outline-primary mt-2"><%= t.scan_qr %></a>
+                    <h5 class="fw-bold">Disconnected</h5>
+                    <a href="/qr" class="btn btn-sm btn-outline-primary mt-2">Scan QR Code</a>
                 <% } %>
             </div>
         </div>
@@ -40,13 +40,13 @@
     <div class="col-md-4">
         <div class="card stat-card border-0 shadow-sm h-100">
             <div class="card-body text-center">
-                <h6 class="text-muted text-uppercase fw-bold mb-3"><%= t.stats_contacts %></h6>
+                <h6 class="text-muted text-uppercase fw-bold mb-3">Total Contacts (Synced)</h6>
                 <div class="display-4 text-primary mb-2"><i class="fas fa-users"></i></div>
                 <h2 class="fw-bold"><%= stats.totalContacts %></h2>
                 <% if (settings.last_sync) { %>
-                    <small class="text-muted"><%= t.last_sync %>: <%= new Date(settings.last_sync).toLocaleString(currentLang === 'nl' ? 'nl-NL' : 'en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) %></small>
+                    <small class="text-muted">Last sync: <%= new Date(settings.last_sync).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) %></small>
                 <% } else { %>
-                    <small class="text-muted text-uppercase small fw-bold"><%= t.never_sync %></small>
+                    <small class="text-muted">Never synced</small>
                 <% } %>
             </div>
         </div>
@@ -54,7 +54,7 @@
     <div class="col-md-4">
         <div class="card stat-card border-0 shadow-sm h-100">
             <div class="card-body text-center">
-                <h6 class="text-muted text-uppercase fw-bold mb-3"><%= t.stats_messages %></h6>
+                <h6 class="text-muted text-uppercase fw-bold mb-3">Messages Sent</h6>
                 <div class="display-4 text-info mb-2"><i class="fas fa-paper-plane"></i></div>
                 <h2 class="fw-bold"><%= stats.totalMessagesSent %></h2>
             </div>
@@ -64,8 +64,8 @@
 
 <div class="row mt-5">
     <div class="col-12 mb-3">
-        <h4 class="fw-bold"><i class="fas fa-calendar-alt me-2 text-primary"></i> <%= t.upcoming_title %></h4>
-        <p class="text-muted small"><%= t.upcoming_desc %></p>
+        <h4 class="fw-bold"><i class="fas fa-calendar-alt me-2 text-primary"></i> Upcoming Birthdays</h4>
+        <p class="text-muted small">Birthdays expected within the next 60 days.</p>
     </div>
     <div class="col-12">
         <div class="card border-0 shadow-sm bg-white rounded-3">
@@ -74,10 +74,10 @@
                     <table class="table table-hover mb-0 align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th class="ps-4"><%= t.col_date %></th>
-                                <th><%= t.col_name %></th>
-                                <th><%= t.col_age %></th>
-                                <th><%= t.col_days %></th>
+                                <th class="ps-4">Date</th>
+                                <th>Name</th>
+                                <th>Age</th>
+                                <th>Days Left</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -85,7 +85,7 @@
                                 <tr>
                                     <td colspan="4" class="text-center py-5 text-muted">
                                         <i class="fas fa-calendar-times mb-2 fa-2x"></i><br>
-                                        <%= t.no_birthdays_desc %>
+                                        No upcoming birthdays found. Try syncing your contacts!
                                     </td>
                                 </tr>
                             <% } else { %>
@@ -109,18 +109,18 @@
                                         </td>
                                         <td>
                                             <% if (b.age) { %>
-                                                <span class="badge bg-info bg-opacity-10 text-info rounded-pill px-3 py-1 small"><%= t.turns %> <%= b.age %></span>
+                                                <span class="badge bg-info bg-opacity-10 text-info rounded-pill px-3 py-1 small">Turns <%= b.age %></span>
                                             <% } else { %>
-                                                <span class="text-muted small text-uppercase fw-bold"><%= t.unknown %></span>
+                                                <span class="text-muted small">Unknown</span>
                                             <% } %>
                                         </td>
                                         <td>
                                             <% if (b.daysUntil === 0) { %>
-                                                <span class="badge bg-success bg-opacity-10 text-success px-3 py-1 rounded-pill small"><%= t.today %></span>
+                                                <span class="badge bg-success bg-opacity-10 text-success px-3 py-1 rounded-pill small">Today!</span>
                                             <% } else if (b.daysUntil === 1) { %>
-                                                <span class="badge bg-warning bg-opacity-10 text-warning px-3 py-1 rounded-pill small"><%= t.tomorrow %></span>
+                                                <span class="badge bg-warning bg-opacity-10 text-warning px-3 py-1 rounded-pill small">Tomorrow</span>
                                             <% } else { %>
-                                                <span class="text-muted small"><%= t.in_days.replace('[DAYS]', b.daysUntil) %></span>
+                                                <span class="text-muted small">In <strong><%= b.daysUntil %></strong> days</span>
                                             <% } %>
                                         </td>
                                     </tr>
