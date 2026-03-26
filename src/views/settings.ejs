@@ -16,6 +16,19 @@
 <div class="row pb-5">
     <div class="col-md-8 mx-auto">
         
+        <!-- WHATSAPP STATUS -->
+        <div class="card border-0 shadow-sm mb-4 bg-white rounded-3">
+            <div class="card-header bg-success text-white py-3 fw-bold">
+                <h5 class="mb-0"><i class="fab fa-whatsapp me-2"></i> WhatsApp Connection</h5>
+            </div>
+            <div class="card-body p-4 text-center" id="waStatusContainer">
+                <div class="spinner-border text-success" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted mb-0">Checking connection status...</p>
+            </div>
+        </div>
+
         <!-- TEST CONNECTION SETTINGS -->
         <div class="card border-0 shadow-sm mb-4 bg-white rounded-3">
             <div class="card-header bg-warning text-dark py-3 fw-bold">
@@ -301,6 +314,41 @@
 
     loadContacts();
     initBlocklist();
+    // Custom WA Status check
+    async function checkWaStatus() {
+        try {
+            const res = await fetch('/api/whatsapp/status');
+            const data = await res.json();
+            const container = document.getElementById('waStatusContainer');
+            
+            if (data.connected) {
+                container.innerHTML = `
+                    <div class="text-success mb-2">
+                        <i class="fas fa-check-circle fa-4x"></i>
+                    </div>
+                    <h5 class="fw-bold">Connected & Ready</h5>
+                    <p class="text-muted mb-0">Your WhatsApp account is successfully linked to the bot.</p>
+                `;
+            } else if (data.qrUrl) {
+                container.innerHTML = `
+                    <p class="text-muted mb-3">Please scan this QR code with your WhatsApp app to link your account.</p>
+                    <img src="${data.qrUrl}" alt="WhatsApp QR Code" class="img-fluid border rounded p-2 shadow-sm" style="max-width: 250px;">
+                    <p class="small text-muted mt-3 mb-0"><i class="fas fa-sync fa-spin me-1"></i> Waiting for scan...</p>
+                `;
+                setTimeout(checkWaStatus, 3000);
+            } else {
+                container.innerHTML = `
+                    <div class="spinner-border text-warning mb-2" role="status"></div>
+                    <h5 class="fw-bold">Starting WhatsApp Client...</h5>
+                    <p class="text-muted mb-0">Please wait. Generating QR code...</p>
+                `;
+                setTimeout(checkWaStatus, 3000);
+            }
+        } catch (e) {
+            setTimeout(checkWaStatus, 5000);
+        }
+    }
+    checkWaStatus();
 </script>
 
 <%- include('partials/footer') %>

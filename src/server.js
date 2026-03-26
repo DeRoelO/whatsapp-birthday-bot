@@ -130,7 +130,7 @@ app.post('/api/send-today', async (req, res) => {
     }
 });
 
-// API endpoint for test message
+// API endpoint for text message
 app.post('/api/test-message', async (req, res) => {
     const phone = req.body.phone;
     const text = "🤖 Hello! This is a test message from your WhatsApp Birthday Bot. If you receive this, the connection is working perfectly!";
@@ -143,6 +143,14 @@ app.post('/api/test-message', async (req, res) => {
         if (phone) await addLog(null, phone, 'Test Message', text, `failed: ${err.message}`);
         res.status(500).json({ success: false, error: err.message });
     }
+});
+
+// API endpoint for WhatsApp connection status and QR code
+app.get('/api/whatsapp/status', (req, res) => {
+    res.json({
+        connected: wa.isConnected(),
+        qrUrl: wa.getQrCodeDataUrl()
+    });
 });
 
 // --- Contact Management API ---
