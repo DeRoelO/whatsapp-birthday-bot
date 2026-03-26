@@ -47,7 +47,10 @@ const startClient = () => {
         try { client.destroy(); } catch (_) {}
     }
 
+    console.log('WhatsApp: Clearing Chrome locks before initialization...');
     clearLocks('./.wwebjs_auth');
+    
+    console.log('WhatsApp: Creating client instance...');
     client = createClient();
 
     let lastQrLog = 0;
@@ -89,7 +92,19 @@ const startClient = () => {
         setTimeout(startClient, 5000);
     });
 
-    client.initialize().catch((err) => {
+    console.log('WhatsApp: Initializing client (this may take 30-60 seconds in Docker)...');
+    
+    // Safety timeout: If it hasn't reached 'qr' or 'ready' in 90 seconds, log it.
+    const initTimeout = setTimeout(() => {
+        if (!isReady && !qrCodeDataUrl) {
+            console.warn('WhatsApp: Initialization is taking unusually long. Checkout the logs for browser errors.');
+        }
+    }, 90000);
+
+    client.initialize().then(() => {
+        console.log('WhatsApp: initialize() resolved.');
+    }).catch((err) => {
+        clearTimeout(initTimeout);
         console.error('WhatsApp: Initialization error:', err.message);
         isReady = false;
         console.log('WhatsApp: Retrying initialization in 10 seconds...');

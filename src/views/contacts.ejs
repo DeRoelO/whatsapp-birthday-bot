@@ -228,10 +228,16 @@
     }
 
     function filterContacts() {
-        const val = document.getElementById('contactSearch').value.toLowerCase();
+        const val = document.getElementById('contactSearch').value.toLowerCase().trim();
         document.querySelectorAll('.contact-row').forEach(row => {
-            const text = row.textContent.toLowerCase();
-            row.style.display = text.includes(val) ? 'flex' : 'none';
+            const text = row.innerText.toLowerCase();
+            if (val === '' || text.includes(val)) {
+                row.classList.remove('d-none');
+                row.classList.add('d-flex');
+            } else {
+                row.classList.add('d-none');
+                row.classList.remove('d-flex');
+            }
         });
     }
 </script>

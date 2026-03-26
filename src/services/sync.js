@@ -76,12 +76,16 @@ export const syncContacts = async () => {
                     isMatch = true;
                 } 
                 
-                // 2. Birthday Match (Very high confidence if names are even slightly similar)
-                // If birthdays match exactly and they have the exact same first name.
+                // 2. Birthday Match (Stricter):
+                // If birthdays match exactly, we still require a decent name similarity.
+                // Just sharing the first name "Jeroen" is not enough if the rest is different.
                 if (!isMatch && c1.birth_day && c1.birth_day === c2.birth_day && c1.birth_month === c2.birth_month) {
-                    const w1 = n1.split(' ');
-                    const w2 = n2.split(' ');
-                    if (w1.length > 0 && w2.length > 0 && w1[0] === w2[0]) {
+                    const w1 = n1.split(' ').filter(w => w.length > 2);
+                    const w2 = n2.split(' ').filter(w => w.length > 2);
+                    const shared = w1.filter(w => w2.includes(w));
+                    
+                    // Match if they share at least 2 significant words OR one is a substring of the other
+                    if (shared.length >= 2 || n1.includes(n2) || n2.includes(n1)) {
                         isMatch = true;
                     }
                 }
