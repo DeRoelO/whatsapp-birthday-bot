@@ -5,7 +5,8 @@ import * as wa from './services/whatsapp.js';
 import { 
     getStats, getLogs, getSetting, getAllSettings, getUpcomingBirthdays, 
     addLog, setSetting, getAllContacts, getMergeSuggestions, getManualMerges,
-    addManualMerge, removeManualMerge, updateSuggestionStatus, resetDatabase
+    addManualMerge, removeManualMerge, updateSuggestionStatus, resetDatabase,
+    getIgnoredSuggestions
 } from './db/database.js';
 import { checkAndScheduleBirthdays } from './services/birthday.js';
 import { syncContacts } from './services/sync.js';
@@ -160,6 +161,7 @@ app.get('/contacts', async (req, res) => {
         const stats = await getStats();
         const lastSync = await getSetting('last_sync', 'Never');
         const suggestions = await getMergeSuggestions();
+        const ignoredSuggestions = await getIgnoredSuggestions();
         const manualMerges = await getManualMerges();
         const allContacts = await getAllContacts();
 
@@ -167,6 +169,7 @@ app.get('/contacts', async (req, res) => {
             stats,
             lastSync,
             suggestions,
+            ignoredSuggestions,
             manualMerges,
             allContacts,
             page: 'contacts'
@@ -201,6 +204,16 @@ app.delete('/api/merges/:slaveId', async (req, res) => {
 app.post('/api/suggestions/:id/ignore', async (req, res) => {
     try {
         await updateSuggestionStatus(req.params.id, 'ignored');
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// API: Unignore Suggestion
+app.post('/api/suggestions/:id/unignore', async (req, res) => {
+    try {
+        await updateSuggestionStatus(req.params.id, 'pending');
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });

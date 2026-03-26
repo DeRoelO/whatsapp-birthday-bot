@@ -347,6 +347,18 @@ export const getMergeSuggestions = async () => {
     `);
 };
 
+export const getIgnoredSuggestions = async () => {
+    return await all(`
+        SELECT s.*, 
+               c1.name as name_a, c1.phone as phone_a, c1.company as company_a, c1.email as email_a,
+               c2.name as name_b, c2.phone as phone_b, c2.company as company_b, c2.email as email_b
+        FROM merge_suggestions s
+        JOIN contacts c1 ON s.contact_a_id = c1.id
+        JOIN contacts c2 ON s.contact_b_id = c2.id
+        WHERE s.status = 'ignored'
+    `);
+};
+
 export const addMergeSuggestion = async (idA, idB) => {
     await run(`INSERT OR IGNORE INTO merge_suggestions (contact_a_id, contact_b_id) VALUES (?, ?)`, [idA, idB]);
 };
