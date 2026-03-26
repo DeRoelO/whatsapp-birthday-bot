@@ -31,8 +31,14 @@ const startClient = () => {
 
     client = createClient();
 
+    let lastQrLog = 0;
     client.on('qr', async (qr) => {
-        console.log('WhatsApp: QR Code received, waiting for scan.');
+        const now = Date.now();
+        if (now - lastQrLog > 60000) {
+            console.log('WhatsApp: QR Code received, waiting for scan. (Check the GUI Settings tab to scan it)');
+            lastQrLog = now;
+        }
+        
         try {
             qrCodeDataUrl = await qrcode.toDataURL(qr);
         } catch (err) {
