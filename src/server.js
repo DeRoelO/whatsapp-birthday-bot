@@ -5,7 +5,7 @@ import * as wa from './services/whatsapp.js';
 import { 
     getStats, getLogs, getSetting, getAllSettings, getUpcomingBirthdays, 
     addLog, setSetting, getAllContacts, getMergeSuggestions, getManualMerges,
-    addManualMerge, removeManualMerge, updateSuggestionStatus 
+    addManualMerge, removeManualMerge, updateSuggestionStatus, resetDatabase
 } from './db/database.js';
 import { checkAndScheduleBirthdays } from './services/birthday.js';
 import { syncContacts } from './services/sync.js';
@@ -153,43 +153,6 @@ app.get('/api/whatsapp/status', (req, res) => {
     });
 });
 
-// --- Contact Management API ---
-app.post('/api/merges', async (req, res) => {
-    const { masterId, slaveId } = req.body;
-    try {
-        await db.addManualMerge(masterId, slaveId);
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-app.delete('/api/merges/:slaveId', async (req, res) => {
-    try {
-        await db.removeManualMerge(req.params.slaveId);
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-app.post('/api/suggestions/:id/ignore', async (req, res) => {
-    try {
-        await db.updateSuggestionStatus(req.params.id, 'ignored');
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-app.post('/api/database/reset', async (req, res) => {
-    try {
-        await db.resetDatabase();
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
 
 // Contacts Management Page
 app.get('/contacts', async (req, res) => {
@@ -238,6 +201,16 @@ app.delete('/api/merges/:slaveId', async (req, res) => {
 app.post('/api/suggestions/:id/ignore', async (req, res) => {
     try {
         await updateSuggestionStatus(req.params.id, 'ignored');
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// API: Reset Database
+app.post('/api/database/reset', async (req, res) => {
+    try {
+        await resetDatabase();
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
