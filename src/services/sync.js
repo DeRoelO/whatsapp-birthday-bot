@@ -52,13 +52,6 @@ export const syncContacts = async () => {
         console.log('Sync: Analyzing contacts for merge suggestions...');
         const dbContacts = await getAllContacts(); 
         
-        // Dutch particles to ignore for the "prefix/core" matching
-        const particles = ['van', 'de', 'der', 'den', 'het', 't', 'v.d.', 'vd'];
-        const getCoreWords = (n) => n.toLowerCase()
-            .replace(/[^a-z0-9 ]/g, ' ')
-            .split(/\s+/)
-            .filter(w => w.length > 1 && !particles.includes(w));
-        
         for (let i = 0; i < dbContacts.length; i++) {
             for (let j = i + 1; j < dbContacts.length; j++) {
                 const c1 = dbContacts[i];
@@ -70,30 +63,27 @@ export const syncContacts = async () => {
                 // If they have the same phone (and it's not empty), they are candidates but probably already unique by remote_id
                 if (c1.phone && c1.phone === c2.phone) continue; 
 
-                const w1 = getCoreWords(c1.name);
-                const w2 = getCoreWords(c2.name);
+                const n1 = c1.name.toLowerCase().trim();
+                const n2 = c2.name.toLowerCase().trim();
                 
                 let isMatch = false;
 
-                // 1. Strict Name Match:
-                // Shared words >= 2 AND the first core word must be the same
-                // (This avoids matching "Jan Janssen" with "Willem Janssen")
-                const shared = w1.filter(w => w2.includes(w));
-                if (shared.length >= 2 && w1[0] === w2[0]) {
+                // 1. Literal Substring Match:
+                // If the entire name A is exactly inside name B (or vice versa).
+                // Example: "Jan Janssen" is inside "Jan Janssen Privé" -> Match
+                // Example: "Jeroen van Galen" inside "Jeroen van Sleeuwen" -> No Match
+                if (n1.length > 2 && n2.length > 2 && (n1.includes(n2) || n2.includes(n1))) {
                     isMatch = true;
                 } 
                 
                 // 2. Birthday Match (Very high confidence if names are even slightly similar)
-                // If birthdays match exactly and they share at least 1 core word
+                // If birthdays match exactly and they have the exact same first name.
                 if (!isMatch && c1.birth_day && c1.birth_day === c2.birth_day && c1.birth_month === c2.birth_month) {
-                    if (shared.length >= 1) {
+                    const w1 = n1.split(' ');
+                    const w2 = n2.split(' ');
+                    if (w1.length > 0 && w2.length > 0 && w1[0] === w2[0]) {
                         isMatch = true;
                     }
-                }
-
-                // 3. Small unique names (e.g. "Mama" and "Mama")
-                if (!isMatch && w1.length === 1 && w2.length === 1 && w1[0] === w2[0]) {
-                    isMatch = true;
                 }
 
                 if (isMatch) {

@@ -24,11 +24,30 @@ const createClient = () => new Client({
     }
 });
 
+import fs from 'fs';
+import path from 'path';
+
+const clearLocks = (dir) => {
+    if (!fs.existsSync(dir)) return;
+    try {
+        const files = fs.readdirSync(dir);
+        for (const file of files) {
+            const fullPath = path.join(dir, file);
+            if (fs.statSync(fullPath).isDirectory()) {
+                clearLocks(fullPath);
+            } else if (file === 'SingletonLock' || file === 'SingletonCookie') {
+                try { fs.unlinkSync(fullPath); } catch (e) {}
+            }
+        }
+    } catch(e) {}
+};
+
 const startClient = () => {
     if (client) {
         try { client.destroy(); } catch (_) {}
     }
 
+    clearLocks('./.wwebjs_auth');
     client = createClient();
 
     let lastQrLog = 0;
