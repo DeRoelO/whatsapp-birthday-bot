@@ -1,0 +1,35 @@
+name: Bouw en Publiceer Docker Image
+
+on:
+  push:
+    branches: [ "main", "master" ]
+
+env:
+  REGISTRY: ghcr.io
+  # Docker eist dat namen altijd in kleine letters zijn!
+  IMAGE_NAME: deroelo/whatsapp-birthday-bot
+
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in bij GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build en Push de image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
