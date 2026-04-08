@@ -10,6 +10,7 @@ import {
 } from './db/database.js';
 import { checkAndScheduleBirthdays } from './services/birthday.js';
 import { syncContacts } from './services/sync.js';
+import ical from 'ical-generator';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,6 +39,34 @@ app.get('/calendar', async (req, res) => {
     try {
         const upcoming = await getUpcomingBirthdays(60);
         res.render('calendar', { upcoming, page: 'calendar' });
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
+
+app.get('/feed.ics', async (req, res) => {
+    try {
+        const contacts = await getAllContacts();
+        const calendar = ical({ name: 'Verjaardagen (WhatsApp Bot)' });
+
+        for (const c of contacts) {
+            if (c.birth_day && c.birth_month) {
+                const baseYear = c.birth_year || 2000;
+                calendar.createEvent({
+                    start: new Date(baseYear, c.birth_month - 1, c.birth_day),
+                    allDay: true,
+                    summary: `🎈 Verjaardag van ${c.name}`,
+                    description: c.birth_year ? `Geboortejaar: ${c.birth_year}` : 'Geboortejaar onbekend',
+                    repeating: {
+                        freq: 'YEARLY'
+                    }
+                });
+            }
+        }
+
+        res.set('Content-Type', 'text/calendar; charset=utf-8');
+        res.set('Content-Disposition', 'attachment; filename="verjaardagen.ics"');
+        res.send(calendar.toString());
     } catch (err) {
         res.status(500).send(err.message);
     }
