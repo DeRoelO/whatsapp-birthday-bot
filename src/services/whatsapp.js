@@ -33,10 +33,14 @@ const clearLocks = (dir) => {
         const files = fs.readdirSync(dir);
         for (const file of files) {
             const fullPath = path.join(dir, file);
-            if (fs.statSync(fullPath).isDirectory()) {
-                clearLocks(fullPath);
-            } else if (file === 'SingletonLock' || file === 'SingletonCookie') {
-                try { fs.unlinkSync(fullPath); } catch (e) {}
+            try {
+                if (fs.lstatSync(fullPath).isDirectory()) {
+                    clearLocks(fullPath);
+                } else if (file === 'SingletonLock' || file === 'SingletonCookie') {
+                    try { fs.unlinkSync(fullPath); } catch (e) {}
+                }
+            } catch (innerErr) {
+                // Ignore stat errors for individual files
             }
         }
     } catch(e) {}

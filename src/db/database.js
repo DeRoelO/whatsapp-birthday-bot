@@ -272,7 +272,7 @@ export const getStats = async () => {
 };
 
 export const getAllContacts = async () => {
-    return await all(`SELECT id, name, nickname, company, email, phone, birth_day, birth_month FROM contacts ORDER BY name ASC`);
+    return await all(`SELECT id, name, nickname, company, email, phone, birth_day, birth_month, birth_year FROM contacts ORDER BY name ASC`);
 };
 
 export const getUpcomingBirthdays = async (days = 30) => {
