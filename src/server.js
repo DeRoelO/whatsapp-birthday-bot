@@ -64,8 +64,9 @@ app.get('/feed.ics', async (req, res) => {
             }
         }
 
+        res.set('Access-Control-Allow-Origin', '*');
         res.set('Content-Type', 'text/calendar; charset=utf-8');
-        res.set('Content-Disposition', 'attachment; filename="verjaardagen.ics"');
+        res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
         res.send(calendar.toString());
     } catch (err) {
         res.status(500).send(err.message);
