@@ -315,6 +315,9 @@
     loadContacts();
     initBlocklist();
     // Custom WA Status check
+    let waLayoutInitialized = false;
+    let isConnectedState = null;
+
     async function checkWaStatus() {
         try {
             const res = await fetch('/api/whatsapp/status');
@@ -322,28 +325,116 @@
             const container = document.getElementById('waStatusContainer');
             
             if (data.connected) {
-                container.innerHTML = `
-                    <div class="text-success mb-2">
-                        <i class="fas fa-check-circle fa-4x"></i>
-                    </div>
-                    <h5 class="fw-bold">Connected & Ready</h5>
-                    <p class="text-muted mb-0">Your WhatsApp account is successfully linked to the bot.</p>
-                `;
-            } else if (data.qrUrl) {
-                container.innerHTML = `
-                    <p class="text-muted mb-3">Please scan this QR code with your WhatsApp app to link your account.</p>
-                    <img src="${data.qrUrl}" alt="WhatsApp QR Code" class="img-fluid border rounded p-2 shadow-sm" style="max-width: 250px;">
-                    <p class="small text-muted mt-3 mb-0"><i class="fas fa-sync fa-spin me-1"></i> Waiting for scan...</p>
-                `;
-                setTimeout(checkWaStatus, 3000);
+                if (isConnectedState !== true) {
+                    isConnectedState = true;
+                    waLayoutInitialized = false;
+                    container.innerHTML = `
+                        <div class="text-success mb-2">
+                            <i class="fas fa-check-circle fa-4x"></i>
+                        </div>
+                        <h5 class="fw-bold">Connected & Ready</h5>
+                        <p class="text-muted mb-0">Your WhatsApp account is successfully linked to the bot.</p>
+                    `;
+                }
             } else {
-                container.innerHTML = `
-                    <div class="spinner-border text-warning mb-2" role="status"></div>
-                    <h5 class="fw-bold">Starting WhatsApp Client...</h5>
-                    <p class="text-muted mb-0">Please wait. Generating QR code...</p>
-                `;
-                setTimeout(checkWaStatus, 3000);
+                if (isConnectedState !== false) {
+                    isConnectedState = false;
+                    waLayoutInitialized = false;
+                }
+
+                if (!waLayoutInitialized) {
+                    container.innerHTML = `
+                        <div class="row align-items-stretch">
+                            <div class="col-md-6 mb-4 mb-md-0 border-end d-flex flex-column align-items-center justify-content-center">
+                                <h6 class="fw-bold mb-3"><i class="fas fa-qrcode me-1 text-success"></i> Option 1: Scan QR Code</h6>
+                                <div id="waQrCodeContainer" class="my-2 d-flex align-items-center justify-content-center" style="min-height: 200px; width: 100%;">
+                                    <div class="spinner-border text-success" role="status"></div>
+                                </div>
+                                <p class="small text-muted mt-2 mb-0"><i id="waQrIcon" class="fas fa-sync fa-spin me-1"></i> <span id="waQrText">Generating QR code...</span></p>
+                            </div>
+                            <div class="col-md-6 d-flex flex-column align-items-center justify-content-center">
+                                <h6 class="fw-bold mb-3"><i class="fas fa-phone-alt me-1 text-primary"></i> Option 2: Link with Phone Number</h6>
+                                <p class="text-muted small text-center px-2">Enter your phone number (with country code, e.g. +31612345678) to get a pairing code to enter on your phone.</p>
+                                <div class="input-group mb-3 px-4" style="max-width: 320px;">
+                                    <input type="text" id="waPairPhone" class="form-control form-control-sm" placeholder="+31612345678">
+                                    <button class="btn btn-sm btn-primary" type="button" id="btnRequestPairCode">Get Code</button>
+                                </div>
+                                <div id="waPairCodeResult" class="fw-bold fs-4 text-primary my-2 d-flex align-items-center justify-content-center" style="letter-spacing: 2px; min-height: 52px; width: 100%;"></div>
+                                <div id="waPairError" class="small px-4 text-center mt-2"></div>
+                            </div>
+                        </div>
+                    `;
+                    waLayoutInitialized = true;
+                    
+                    // Bind events for pairing button
+                    document.getElementById('btnRequestPairCode').addEventListener('click', async () => {
+                        const phoneInput = document.getElementById('waPairPhone');
+                        const resultDiv = document.getElementById('waPairCodeResult');
+                        const errorDiv = document.getElementById('waPairError');
+                        const btn = document.getElementById('btnRequestPairCode');
+                        
+                        const phone = phoneInput.value.trim();
+                        if (!phone) {
+                            errorDiv.className = 'small px-4 text-center mt-2 text-danger';
+                            errorDiv.textContent = 'Please enter a phone number.';
+                            return;
+                        }
+                        
+                        btn.disabled = true;
+                        const originalBtnText = btn.textContent;
+                        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
+                        resultDiv.textContent = '';
+                        errorDiv.textContent = '';
+                        
+                        try {
+                            const pairRes = await fetch('/api/whatsapp/pair', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ phone })
+                            });
+                            const pairData = await pairRes.json();
+                            if (pairData.success) {
+                                const code = pairData.code;
+                                const formattedCode = code.length === 8 ? `${code.slice(0, 4)}-${code.slice(4)}` : code;
+                                resultDiv.innerHTML = `<span class="bg-light border rounded px-3 py-2 text-uppercase font-monospace shadow-sm">${formattedCode}</span>`;
+                                errorDiv.className = 'small px-4 text-center mt-2 text-success';
+                                errorDiv.innerHTML = '<i class="fas fa-info-circle me-1"></i> Code generated! On your phone, open WhatsApp, go to Linked Devices > Link with phone number and enter this code.';
+                            } else {
+                                errorDiv.className = 'small px-4 text-center mt-2 text-danger';
+                                errorDiv.textContent = pairData.error || 'Failed to generate code.';
+                            }
+                        } catch (err) {
+                            errorDiv.className = 'small px-4 text-center mt-2 text-danger';
+                            errorDiv.textContent = 'Failed to connect to the server.';
+                        } finally {
+                            btn.disabled = false;
+                            btn.textContent = originalBtnText;
+                        }
+                    });
+                }
+
+                // Update QR code inside the container without overwriting other elements
+                const qrContainer = document.getElementById('waQrCodeContainer');
+                const qrIcon = document.getElementById('waQrIcon');
+                const qrText = document.getElementById('waQrText');
+                
+                if (data.qrUrl) {
+                    const currentImg = qrContainer.querySelector('img');
+                    if (!currentImg || currentImg.src !== data.qrUrl) {
+                        qrContainer.innerHTML = `<img src="${data.qrUrl}" alt="WhatsApp QR Code" class="img-fluid border rounded p-2 shadow-sm" style="max-width: 180px;">`;
+                    }
+                    if (qrIcon) qrIcon.className = 'fas fa-sync fa-spin me-1';
+                    if (qrText) qrText.textContent = 'Waiting for scan...';
+                } else {
+                    const currentSpinner = qrContainer.querySelector('.spinner-border');
+                    if (!currentSpinner) {
+                        qrContainer.innerHTML = `<div class="spinner-border text-warning" role="status"></div>`;
+                    }
+                    if (qrIcon) qrIcon.className = 'fas fa-cog fa-spin me-1';
+                    if (qrText) qrText.textContent = 'Starting WhatsApp Client...';
+                }
             }
+            setTimeout(checkWaStatus, 3000);
         } catch (e) {
             setTimeout(checkWaStatus, 5000);
         }

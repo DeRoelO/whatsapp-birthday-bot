@@ -129,6 +129,34 @@ export const isConnected = () => isReady;
 
 export const getQrCodeDataUrl = () => qrCodeDataUrl;
 
+export const requestPairingCode = async (phone) => {
+    if (!client) {
+        throw new Error('WhatsApp client is not initialized.');
+    }
+    if (isReady) {
+        throw new Error('WhatsApp client is already connected.');
+    }
+
+    // Normalize phone number to international format (no +, no spaces)
+    let cleanPhone = phone.replace(/[^0-9]/g, '');
+
+    // Auto-correct Dutch local numbers: 06xxxxxxxx → 316xxxxxxxx
+    if (cleanPhone.startsWith('06') && cleanPhone.length === 10) {
+        cleanPhone = '31' + cleanPhone.substring(1);
+    } else if (cleanPhone.startsWith('00')) {
+        cleanPhone = cleanPhone.substring(2);
+    }
+
+    console.log(`WhatsApp: Requesting pairing code for phone number: ${cleanPhone}`);
+    try {
+        const code = await client.requestPairingCode(cleanPhone);
+        return code;
+    } catch (err) {
+        console.error('WhatsApp: Failed to request pairing code:', err);
+        throw err;
+    }
+};
+
 export const sendMessage = async (phone, text) => {
     if (!isReady) {
         throw new Error('WhatsApp client is not ready. Please scan the QR code first.');

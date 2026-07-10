@@ -184,6 +184,20 @@ app.get('/api/whatsapp/status', (req, res) => {
     });
 });
 
+// API endpoint to request pairing code
+app.post('/api/whatsapp/pair', async (req, res) => {
+    const { phone } = req.body;
+    try {
+        if (!phone) {
+            return res.status(400).json({ success: false, error: 'Phone number is required.' });
+        }
+        const code = await wa.requestPairingCode(phone);
+        res.json({ success: true, code });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 
 // Contacts Management Page
 app.get('/contacts', async (req, res) => {
