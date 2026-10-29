@@ -6,7 +6,7 @@ import fs from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const dataDir = path.join(__dirname, '../../data');
+const dataDir = process.env.DATA_DIR || path.join(__dirname, '../../data');
 if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
 }
@@ -156,27 +156,26 @@ export const getAllSettings = async () => {
 };
 
 export const upsertContact = async (contact) => {
-    const existing = await get(`SELECT id, birth_day, birth_month, birth_year, company, email FROM contacts WHERE remote_id = ?`, [contact.remote_id]);
-    
-    if (existing) {
-        const bDay = contact.birth_day || existing.birth_day;
-        const bMonth = contact.birth_month || existing.birth_month;
-        const bYear = contact.birth_year || existing.birth_year;
-        const company = contact.company || existing.company;
-        const email = contact.email || existing.email;
-        
-        await run(
-            `UPDATE contacts SET name = ?, nickname = ?, company = ?, email = ?, phone = ?, birth_day = ?, birth_month = ?, birth_year = ? WHERE remote_id = ?`,
-            [contact.name, contact.nickname, company, email, contact.phone, bDay, bMonth, bYear, contact.remote_id]
-        );
-        return existing.id;
-    } else {
-        const res = await run(
-            `INSERT INTO contacts (remote_id, name, nickname, company, email, phone, birth_day, birth_month, birth_year) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [contact.remote_id, contact.name, contact.nickname, contact.company, contact.email, contact.phone, contact.birth_day, contact.birth_month, contact.birth_year]
-        );
-        return res.id;
+    if (typeof contact.remote_id !== 'string' || !contact.remote_id.trim()) {
+        throw new Error('Contact must have a non-empty remote_id.');
     }
+    // One SQLite statement avoids a race between SELECT and INSERT. Never REPLACE:
+    // IDs, manual merges, logs and last_message_year must survive synchronization.
+    const row = await get(
+        `INSERT INTO contacts (remote_id, name, nickname, company, email, phone, birth_day, birth_month, birth_year)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(remote_id) DO UPDATE SET
+            name = excluded.name, nickname = excluded.nickname, phone = excluded.phone,
+            company = COALESCE(NULLIF(excluded.company, ''), contacts.company),
+            email = COALESCE(NULLIF(excluded.email, ''), contacts.email),
+            birth_day = COALESCE(NULLIF(excluded.birth_day, 0), contacts.birth_day),
+            birth_month = COALESCE(NULLIF(excluded.birth_month, 0), contacts.birth_month),
+            birth_year = COALESCE(NULLIF(excluded.birth_year, 0), contacts.birth_year)
+         RETURNING id`,
+        [contact.remote_id, contact.name, contact.nickname, contact.company, contact.email,
+         contact.phone, contact.birth_day, contact.birth_month, contact.birth_year]
+    );
+    return row.id;
 };
 
 export const getBirthdayContactsToday = async () => {

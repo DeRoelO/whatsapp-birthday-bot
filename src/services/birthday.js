@@ -1,6 +1,22 @@
 import cron from 'node-cron';
 import { getBirthdayContactsToday, addLog, updateLastMessageYear, getSetting } from '../db/database.js';
-import { sendMessage } from './whatsapp.js';
+import { sendMessage, isConnected } from './whatsapp.js';
+import { BirthdayQueue } from './birthday-queue.js';
+
+const birthdayQueue = new BirthdayQueue({
+    isConnected,
+    send: (...args) => executeSend(...args),
+    isEligible: async (contact, forceNow) => {
+        if (!forceNow && await getSetting('scheduler_enabled', process.env.SCHEDULER_ENABLED || 'true') !== 'true') return false;
+        const contacts = await getBirthdayContactsToday();
+        const fresh = contacts.find(c => c.id === contact.id);
+        if (!fresh) return false;
+        const exclusions = (await getSetting('excluded_contacts', '')).split('\n').map(s => s.trim().toLowerCase()).filter(Boolean);
+        if (exclusions.some(ex => [fresh.phone, fresh.name, fresh.nickname].some(value => (value || '').toLowerCase().includes(ex)))) return false;
+        Object.assign(contact, fresh);
+        return true;
+    }
+});
 
 const DEFAULT_TEMPLATES = [
     "Hi [NAME], wishing you a very happy [AGE]th birthday! 🎉 Have a great day!",
@@ -38,6 +54,9 @@ export const startBirthdayScheduler = () => {
 };
 
 export const checkAndScheduleBirthdays = async (forceNow = false) => {
+    if (forceNow && !isConnected()) {
+        return { success: false, count: 0, message: 'WhatsApp is not ready. Link your account in Settings first.' };
+    }
     const today = new Date();
     const currentYear = today.getFullYear();
     const dayOfWeek = today.getDay(); 
@@ -129,11 +148,7 @@ export const checkAndScheduleBirthdays = async (forceNow = false) => {
             console.log(`Birthday Scheduler: Message for ${contact.name} scheduled at ${new Date(Date.now() + delayMs).toLocaleTimeString('en-US')}`);
         }
 
-        setTimeout(() => {
-            executeSend(contact, message, currentYear);
-        }, Math.max(0, delayMs));
-        
-        sentCount++;
+        if (birthdayQueue.schedule(contact, message, currentYear, delayMs, forceNow)) sentCount++;
     }
     
     return { success: true, count: sentCount, message: `${sentCount} messages ${forceNow ? 'sent immediately' : 'scheduled'}.` };
@@ -184,6 +199,7 @@ const executeSend = async (contact, message, currentYear) => {
         await updateLastMessageYear(contact.id, currentYear);
         console.log(`Birthday Scheduler: Successfully sent to ${contact.name}`);
     } catch (err) {
+        if (err.code === 'WHATSAPP_NOT_READY') throw err;
         console.error(`Birthday Scheduler: Failed to send to ${contact.name}:`, err.message);
         await addLog(contact.id, contact.phone, contact.name, message, `failed: ${err.message}`);
     }

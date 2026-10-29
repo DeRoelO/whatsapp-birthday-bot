@@ -82,11 +82,7 @@ app.get('/logs', async (req, res) => {
     }
 });
 
-app.get('/qr', (req, res) => {
-    const connected = wa.isConnected();
-    const qrCodeUrl = wa.getQrCodeDataUrl();
-    res.render('qr', { connected, qrCodeUrl, page: 'qr' });
-});
+app.get('/qr', (req, res) => res.redirect('/settings#whatsapp'));
 
 // GET Settings Page
 app.get('/settings', async (req, res) => {
@@ -178,26 +174,37 @@ app.post('/api/test-message', async (req, res) => {
 
 // API endpoint for WhatsApp connection status and QR code
 app.get('/api/whatsapp/status', (req, res) => {
-    res.json({
-        connected: wa.isConnected(),
-        qrUrl: wa.getQrCodeDataUrl()
-    });
+    res.json(wa.getStatus());
 });
 
 // API endpoint to request pairing code
 app.post('/api/whatsapp/pair', async (req, res) => {
     const { phone } = req.body;
     try {
-        if (!phone) {
+        if (typeof phone !== 'string' || !phone.trim()) {
             return res.status(400).json({ success: false, error: 'Phone number is required.' });
         }
         const code = await wa.requestPairingCode(phone);
         res.json({ success: true, code });
     } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
+        res.status(409).json({ success: false, error: err.message });
     }
 });
 
+
+app.post('/api/whatsapp/restart', async (req, res) => {
+    await wa.reinitWhatsApp();
+    res.json({ success: wa.getStatus().state !== 'error', ...wa.getStatus() });
+});
+
+app.post('/api/whatsapp/qr', async (req, res) => {
+    try {
+        await wa.cancelPairingCode();
+        res.json({ success: true });
+    } catch (err) {
+        res.status(409).json({ success: false, error: err.message });
+    }
+});
 
 // Contacts Management Page
 app.get('/contacts', async (req, res) => {
@@ -285,7 +292,7 @@ app.get('/api/contacts', async (req, res) => {
 });
 
 export const startServer = (port) => {
-    app.listen(port, () => {
+    return app.listen(port, () => {
         console.log(`Web GUI running on port ${port}`);
     });
 };
