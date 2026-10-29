@@ -1,7 +1,17 @@
 import { createDAVClient } from 'tsdav';
 import { upsertContact, getSetting, setSetting, run, getAllContacts, addMergeSuggestion, get } from '../db/database.js';
 
-export const syncContacts = async () => {
+let activeSync = null;
+
+// Startup, cron and manual requests share one sync, including its cleanup phase.
+export const syncContacts = () => {
+    if (!activeSync) {
+        activeSync = performSync().finally(() => { activeSync = null; });
+    }
+    return activeSync;
+};
+
+const performSync = async () => {
     const url = (await getSetting('carddav_url')) || process.env.CARDDAV_URL;
     const username = (await getSetting('carddav_username')) || process.env.CARDDAV_USERNAME;
     const password = (await getSetting('carddav_password')) || process.env.CARDDAV_PASSWORD;

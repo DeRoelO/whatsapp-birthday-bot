@@ -1,0 +1,31 @@
+<div class="card border-0 shadow-sm mb-4 bg-white rounded-3" id="whatsapp" style="scroll-margin-top: 90px">
+    <div class="card-header bg-success text-white py-3 fw-bold">
+        <h5 class="mb-0"><i class="fab fa-whatsapp me-2"></i> WhatsApp koppelen</h5>
+    </div>
+    <div class="card-body p-4" id="waStatusContainer">
+        <p id="waStatusText" role="status" aria-live="polite">Verbindingsstatus ophalen...</p>
+        <p id="waConnectionError" class="text-danger" role="alert"></p>
+        <div id="waLinkOptions" class="row">
+            <div class="col-md-6 text-center mb-4">
+                <h6>Scan de QR-code</h6>
+                <img id="waQrImage" alt="WhatsApp QR-code" class="img-fluid border rounded p-2" style="max-width: 240px" hidden>
+                <p id="waQrHelp" class="small text-muted">De QR-code verschijnt zodra WhatsApp klaar is om te koppelen.</p>
+                <button id="waUseQr" type="button" class="btn btn-sm btn-outline-success" hidden>Terug naar QR-code</button>
+            </div>
+            <div class="col-md-6 mb-4">
+                <h6>Of gebruik een koppelcode</h6>
+                <label for="waPairPhone" class="form-label small">Je eigen WhatsApp-nummer, inclusief landcode</label>
+                <div class="input-group mb-2">
+                    <input type="tel" id="waPairPhone" class="form-control" placeholder="+31612345678" autocomplete="tel">
+                    <button id="btnRequestPairCode" type="button" class="btn btn-primary" disabled>Koppelcode aanvragen</button>
+                </div>
+                <output id="waPairCodeResult" class="d-block fs-3 font-monospace" aria-live="polite"></output>
+                <p id="waPairError" class="text-danger small" role="alert"></p>
+                <p class="small text-muted">Open op je telefoon WhatsApp → Gekoppelde apparaten → Een apparaat koppelen → Koppelen met telefoonnummer. Vul daar de code in. De code wordt automatisch vernieuwd zolang je nog niet gekoppeld bent.</p>
+            </div>
+        </div>
+        <button id="waRestart" type="button" class="btn btn-sm btn-outline-secondary">Verbinding opnieuw starten</button>
+        <p class="small text-muted mt-2 mb-0">Opnieuw starten behoudt je sessie. “Aangemeld” betekent dat WhatsApp de sessie nog moet laden; berichten wachten tot de verbinding gereed is.</p>
+    </div>
+</div>
+<script src="/whatsapp-settings.js" defer></script>

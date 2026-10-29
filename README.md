@@ -36,11 +36,38 @@ docker-compose up -d --build
 *Note: The first build might take a minute or two as it installs the required Chromium dependencies for the headless browser.*
 
 ### 2. Configure via the Web GUI
-1. Open your browser and navigate to the web GUI: `http://localhost:3000`
-2. Go to the **Settings** tab. Fill in your iCloud credentials, set your preferred schedule, and define your message templates.
-3. Go to the **WhatsApp** tab (`http://localhost:3000/qr`).
-4. Open WhatsApp on your smartphone, go to **Linked Devices > Link a Device**, and scan the QR code displayed on the webpage.
-5. Once the QR code is successfully scanned, the status will update to **Connected**. The session and settings are persistently stored inside Docker volumes, meaning they survive container restarts!
+
+1. Open the dashboard at `http://localhost:3000` and go to **Settings**.
+2. Fill in your iCloud credentials, schedule and message templates.
+3. Click **WhatsApp koppelen** in the navigation, or open `http://localhost:3000/settings#whatsapp`. The old `/qr` URL redirects here.
+4. Scan the QR code using WhatsApp's **Linked devices > Link a device**, or enter your own WhatsApp number (including country code) and click **Koppelcode aanvragen**. On your phone choose the option to link with a phone number and enter the code. Refreshed codes appear automatically.
+5. Wait for **Verbonden en klaar om berichten te versturen** before sending a test message. Authentication alone does not mean WhatsApp is ready.
+
+The phone-code button becomes available when WhatsApp has loaded the linking screen. If startup or restoring a session stalls, Settings shows an error after two minutes. Use **Verbinding opnieuw starten** to restart the browser while preserving the saved session. Container logs provide additional browser errors. The bot loads the current WhatsApp Web app instead of a fixed historical HTML snapshot.
+
+Automatic birthday tasks wait while WhatsApp is offline and recheck every 30 seconds until the end of the same local day. Pending tasks are kept in memory; startup reconstructs today's unsent birthdays after a restart. The bot rechecks current contact data, exclusions, scheduler settings and sending history before sending. It does not automatically retry ambiguous delivery errors, to avoid duplicate messages.
+
+### Updating an existing installation
+
+Back up `data/` and `.wwebjs_auth/` before upgrading. In your existing checkout:
+
+```sh
+git pull
+docker compose up -d --build
+docker compose logs --tail=100 -f bot
+```
+
+The existing bind mounts retain the database and WhatsApp session. Do not delete these folders to resolve a synchronization or startup error. The Docker image uses Node.js 24 on Debian Bookworm and Google Chrome for Linux amd64. Native development requires Node.js 22 or later; Node.js 24 is recommended.
+
+### Validation
+
+```sh
+PUPPETEER_SKIP_DOWNLOAD=true npm ci
+npm test
+docker build -t whatsapp-birthday-bot-test .
+```
+
+Tests use temporary databases and fake WhatsApp clients; they never send real messages. CI runs the tests on Node.js 24 and validates the Docker build for pull requests.
 
 ---
 
