@@ -8,6 +8,7 @@
         code: 'Vul de koppelcode in op je telefoon.',
         authenticated: 'Aangemeld. WhatsApp laadt je sessie; verzenden is nog niet mogelijk.',
         ready: 'Verbonden en klaar om berichten te versturen.',
+        idle: 'Slaapstand (RAM besparen). Wordt automatisch wakker bij berichten.',
         reconnecting: 'De verbinding wordt opnieuw gestart...',
         error: 'WhatsApp kon niet worden gestart. Bekijk de melding hieronder.'
     };
@@ -15,7 +16,7 @@
         status = data;
         el('waStatusText').textContent = labels[data.state] || 'Verbindingsstatus onbekend.';
         el('waConnectionError').textContent = data.error || '';
-        el('waLinkOptions').hidden = data.connected;
+        el('waLinkOptions').hidden = data.connected || data.state === 'idle';
         el('btnRequestPairCode').disabled = busy || !['qr', 'code'].includes(data.state);
         el('waUseQr').hidden = data.state !== 'code';
         el('waUseQr').disabled = busy;

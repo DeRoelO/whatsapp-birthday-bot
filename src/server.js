@@ -26,7 +26,7 @@ app.use(express.json());
 app.get('/', async (req, res) => {
     try {
         const stats = await getStats();
-        const connected = wa.isConnected();
+        const connected = wa.isAvailable();
         const settings = await getAllSettings();
         const upcoming = await getUpcomingBirthdays(60);
         res.render('index', { stats, connected, settings, upcoming, page: 'dashboard' });
@@ -104,7 +104,7 @@ app.get('/settings', async (req, res) => {
             excluded_contacts: settings.excluded_contacts || ""
         };
 
-        const connected = wa.isConnected();
+        const connected = wa.isAvailable();
         res.render('settings', { config, connected, page: 'settings', saved: req.query.saved });
     } catch (err) {
         res.status(500).send(err.message);

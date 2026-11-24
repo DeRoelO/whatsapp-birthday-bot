@@ -1,10 +1,10 @@
 import cron from 'node-cron';
 import { getBirthdayContactsToday, addLog, updateLastMessageYear, getSetting } from '../db/database.js';
-import { sendMessage, isConnected } from './whatsapp.js';
+import { sendMessage, isAvailable } from './whatsapp.js';
 import { BirthdayQueue } from './birthday-queue.js';
 
 const birthdayQueue = new BirthdayQueue({
-    isConnected,
+    isConnected: isAvailable,
     send: (...args) => executeSend(...args),
     isEligible: async (contact, forceNow) => {
         if (!forceNow && await getSetting('scheduler_enabled', process.env.SCHEDULER_ENABLED || 'true') !== 'true') return false;
@@ -54,7 +54,7 @@ export const startBirthdayScheduler = () => {
 };
 
 export const checkAndScheduleBirthdays = async (forceNow = false) => {
-    if (forceNow && !isConnected()) {
+    if (forceNow && !isAvailable()) {
         return { success: false, count: 0, message: 'WhatsApp is not ready. Link your account in Settings first.' };
     }
     const today = new Date();

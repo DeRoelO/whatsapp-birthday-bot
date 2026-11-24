@@ -12,7 +12,18 @@ const service = new WhatsAppService({
         webVersionCache: { type: 'none' },
         puppeteer: {
             signal,
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--no-first-run', '--disable-gpu'],
+            protocolTimeout: 60000,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--no-first-run',
+                '--disable-gpu',
+                '--disable-extensions',
+                '--disable-background-timer-throttling',
+                '--disable-backgrounding-occluded-windows',
+                '--disable-renderer-backgrounding'
+            ],
             executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined
         }
     }),
@@ -32,6 +43,8 @@ export const initWhatsApp = () => service.start().catch(err => {
 });
 export const reinitWhatsApp = initWhatsApp;
 export const isConnected = () => service.getStatus().connected;
+export const isAvailable = () => service.isAvailable();
+export const keepAliveWhatsApp = () => service.keepAlive();
 export const getQrCodeDataUrl = () => service.getStatus().qrUrl;
 export const getStatus = () => service.getStatus();
 export const requestPairingCode = phone => service.requestPairingCode(phone);

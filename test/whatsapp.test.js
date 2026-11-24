@@ -107,3 +107,47 @@ test('disconnected clears stale QR/code and initialization failures expose an er
     assert.equal(failing.service.getStatus().state, 'reconnecting');
     assert.match(failing.service.getStatus().error, /browser failed/);
 });
+
+test('ready session sleeps when idle and wakes automatically to send a message', async t => {
+    const { service, clients } = setup(t, { idleTimeoutMs: 20 });
+    await service.start();
+    clients[0].emit('ready');
+    await new Promise(resolve => setTimeout(resolve, 40));
+    assert.equal(service.getStatus().state, 'idle');
+    assert.equal(service.isAvailable(), true);
+    assert.equal(clients[0].destroyed, true);
+
+    const sendPromise = service.sendMessage('0612345678', 'Gefeliciteerd!');
+    await tick();
+    assert.equal(clients.length, 2);
+    clients[1].emit('ready');
+    await sendPromise;
+    assert.deepEqual(clients[1].sent, { id: '31612345678@c.us', text: 'Gefeliciteerd!' });
+
+    await new Promise(resolve => setTimeout(resolve, 40));
+    assert.equal(service.getStatus().state, 'idle');
+    assert.equal(clients[1].destroyed, true);
+});
+
+test('stuck authenticated session automatically restarts after retryDelayMs', async t => {
+    const { service, clients } = setup(t, { timeoutMs: 15, retryDelayMs: 20 });
+    await service.start();
+    clients[0].emit('authenticated');
+    await new Promise(resolve => setTimeout(resolve, 25));
+    assert.equal(service.getStatus().state, 'error');
+    await new Promise(resolve => setTimeout(resolve, 30));
+    assert.equal(clients.length, 2);
+    assert.equal(service.getStatus().state, 'starting');
+});
+
+test('browser timeout during send triggers restart and throws WHATSAPP_NOT_READY for queue retry', async t => {
+    const { service, clients } = setup(t, { retryDelayMs: 5000 });
+    await service.start();
+    clients[0].emit('ready');
+    clients[0].sendMessage = async () => { throw new Error('Runtime.callFunctionOn timed out.'); };
+    await assert.rejects(
+        service.sendMessage('0612345678', 'test'),
+        err => err.code === 'WHATSAPP_NOT_READY'
+    );
+    assert.equal(service.getStatus().state, 'reconnecting');
+});

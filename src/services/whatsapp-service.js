@@ -1,22 +1,115 @@
+const BROWSER_ERROR_RE = /timed out|protocol error|target closed|session closed|execution context was destroyed|detached/i;
+
 // Dependency injection keeps lifecycle and pairing behavior testable without a real account.
 export class WhatsAppService {
-    constructor({ createClient, qrToDataUrl, clearLocks = () => {}, timeoutMs = 120000, pairingTimeoutMs = 30000 }) {
-        Object.assign(this, { createClient, qrToDataUrl, clearLocks, timeoutMs, pairingTimeoutMs });
+    constructor({
+        createClient,
+        qrToDataUrl,
+        clearLocks = () => {},
+        timeoutMs = 120000,
+        pairingTimeoutMs = 30000,
+        idleTimeoutMs = 120000,
+        retryDelayMs = 10000,
+        destroyTimeoutMs = 15000
+    }) {
+        Object.assign(this, { createClient, qrToDataUrl, clearLocks, timeoutMs, pairingTimeoutMs, idleTimeoutMs, retryDelayMs, destroyTimeoutMs });
         this.client = null;
+        this.activeSends = 0;
+        this.readyWaiters = [];
         this.status = { state: 'starting', connected: false, qrUrl: null, pairingCode: null, error: null };
     }
 
     getStatus() { return { ...this.status }; }
+    isAvailable() { return this.status.connected || this.status.state === 'idle'; }
+
     setStatus(state, extra = {}) {
         this.status = { state, connected: state === 'ready', qrUrl: null, pairingCode: null, error: null, ...extra };
+        if (state === 'ready') {
+            this.resolveWaiters();
+            this.scheduleIdle();
+        } else if (['qr', 'code', 'error'].includes(state)) {
+            this.rejectWaiters(this.status.error || 'WhatsApp is not ready. Check the connection in Settings.');
+        }
+    }
+
+    resolveWaiters() {
+        const waiters = this.readyWaiters.splice(0);
+        for (const w of waiters) w.resolve(true);
+    }
+
+    rejectWaiters(message) {
+        const waiters = this.readyWaiters.splice(0);
+        for (const w of waiters) {
+            const err = new Error(message);
+            err.code = 'WHATSAPP_NOT_READY';
+            w.reject(err);
+        }
+    }
+
+    scheduleIdle() {
+        clearTimeout(this.idleTimer);
+        if (!this.idleTimeoutMs || this.idleTimeoutMs <= 0) return;
+        if (this.status.state !== 'ready' || this.activeSends > 0) return;
+        this.idleTimer = setTimeout(() => {
+            this.sleep().catch(err => console.error('WhatsApp: Failed to enter sleep mode:', err.message));
+        }, this.idleTimeoutMs);
+        this.idleTimer.unref?.();
+    }
+
+    async destroyClient(client) {
+        if (!client) return;
+        client.removeAllListeners();
+        let timer;
+        try {
+            await Promise.race([
+                client.destroy(),
+                new Promise(resolve => {
+                    timer = setTimeout(resolve, this.destroyTimeoutMs);
+                    timer.unref?.();
+                })
+            ]);
+        } catch (err) {
+            console.warn('WhatsApp: Error while closing browser:', err?.message || err);
+        } finally {
+            clearTimeout(timer);
+        }
+    }
+
+    async sleep() {
+        if (this.status.state !== 'ready' || this.activeSends > 0 || this.starting) return;
+        clearTimeout(this.idleTimer);
+        clearTimeout(this.watchdog);
+        clearTimeout(this.retryTimer);
+        const previous = this.client;
+        this.launchController?.abort();
+        this.client = null;
+        this.setStatus('idle');
+        await this.destroyClient(previous);
+        this.clearLocks();
+        console.log('WhatsApp: Session put to sleep to save RAM (will wake automatically when needed).');
+    }
+
+    scheduleRetry(error, state = 'reconnecting') {
+        clearTimeout(this.watchdog);
+        clearTimeout(this.idleTimer);
+        this.setStatus(state, { error });
+        console.error('WhatsApp:', error);
+        clearTimeout(this.retryTimer);
+        this.retryTimer = setTimeout(() => {
+            this.start().catch(err => this.setStatus('error', { error: err.message }));
+        }, this.retryDelayMs);
+        this.retryTimer.unref?.();
     }
 
     watchStartup() {
         clearTimeout(this.watchdog);
         this.watchdog = setTimeout(() => {
-            if (!this.status.connected) this.setStatus('error', {
-                error: 'WhatsApp is taking too long to start or restore the session. Restart the connection below and check the container logs.'
-            });
+            if (!this.status.connected && this.status.state !== 'idle') {
+                this.scheduleRetry(
+                    'WhatsApp is taking too long to start or restore the session. Restarting automatically...',
+                    'error'
+                );
+            }
         }, this.timeoutMs);
         this.watchdog.unref?.();
     }
@@ -30,14 +123,12 @@ export class WhatsAppService {
     async restart() {
         clearTimeout(this.retryTimer);
         clearTimeout(this.watchdog);
+        clearTimeout(this.idleTimer);
         this.setStatus('starting');
         const previous = this.client;
         this.launchController?.abort();
         this.client = null; // Ignore events from a closing client.
-        if (previous) {
-            previous.removeAllListeners();
-            await previous.destroy(); // Release Chrome's profile before opening another browser.
-        }
+        await this.destroyClient(previous);
         this.clearLocks();
         this.launchController = new AbortController();
         const current = this.createClient({ signal: this.launchController.signal });
@@ -45,19 +136,13 @@ export class WhatsAppService {
         const active = () => this.client === current;
         const retry = (error) => {
             if (!active()) return;
-            clearTimeout(this.watchdog);
-            this.setStatus('reconnecting', { error });
-            console.error('WhatsApp:', error);
-            clearTimeout(this.retryTimer);
-            this.retryTimer = setTimeout(() => {
-                this.start().catch(err => this.setStatus('error', { error: err.message }));
-            }, 10000);
-            this.retryTimer.unref?.();
+            this.scheduleRetry(error, 'reconnecting');
         };
         current.on('qr', async qr => {
             if (!active() || ['ready', 'authenticated', 'code', 'reconnecting'].includes(this.status.state)) return;
             clearTimeout(this.watchdog);
             clearTimeout(this.retryTimer);
+            clearTimeout(this.idleTimer);
             try {
                 const qrUrl = await this.qrToDataUrl(qr);
                 if (active() && !this.status.connected && this.status.state !== 'authenticated') {
@@ -93,8 +178,55 @@ export class WhatsAppService {
         Promise.resolve().then(() => current.initialize()).catch(err => retry(`Initialization failed: ${err?.message || err}`))
             .finally(async () => {
                 // A browser launch can finish after a user requested a restart.
-                if (!active()) await current.destroy().catch(() => {});
+                if (!active()) await this.destroyClient(current);
             });
+    }
+
+    async ensureReady(waitMs = this.timeoutMs) {
+        if (this.status.connected) {
+            clearTimeout(this.idleTimer);
+            return true;
+        }
+        if (['qr', 'code'].includes(this.status.state)) {
+            const error = new Error('WhatsApp is not ready. Link your account in Settings first.');
+            error.code = 'WHATSAPP_NOT_READY';
+            throw error;
+        }
+        if (this.status.state === 'idle' || this.status.state === 'error' || !this.client) {
+            console.log('WhatsApp: Waking up session...');
+            await this.start();
+            if (this.status.connected) {
+                clearTimeout(this.idleTimer);
+                return true;
+            }
+        }
+        return new Promise((resolve, reject) => {
+            const waiter = { resolve: null, reject: null };
+            const timer = setTimeout(() => {
+                const idx = this.readyWaiters.indexOf(waiter);
+                if (idx !== -1) this.readyWaiters.splice(idx, 1);
+                const err = new Error('Timed out waiting for WhatsApp to become ready.');
+                err.code = 'WHATSAPP_NOT_READY';
+                reject(err);
+            }, waitMs);
+            timer.unref?.();
+            waiter.resolve = (val) => { clearTimeout(timer); resolve(val); };
+            waiter.reject = (err) => { clearTimeout(timer); reject(err); };
+            this.readyWaiters.push(waiter);
+        });
+    }
+
+    async keepAlive() {
+        console.log('WhatsApp: Keep-alive check starting...');
+        try {
+            await this.ensureReady();
+            console.log('WhatsApp: Keep-alive check succeeded; session will return to sleep automatically.');
+            this.scheduleIdle();
+            return true;
+        } catch (err) {
+            console.error('WhatsApp: Keep-alive check failed:', err.message);
+            return false;
+        }
     }
 
     async requestPairingCode(phone) {
@@ -143,23 +275,43 @@ export class WhatsAppService {
     }
 
     async sendMessage(phone, text) {
-        if (!this.status.connected) {
+        const normalized = normalizePhone(phone);
+        if (this.status.state === 'idle') {
+            await this.ensureReady();
+        } else if (!this.status.connected) {
             const error = new Error('WhatsApp is not ready. Check the connection in Settings.');
             error.code = 'WHATSAPP_NOT_READY';
             throw error;
         }
-        await this.client.sendMessage(`${normalizePhone(phone)}@c.us`, text);
-        return true;
+        this.activeSends++;
+        clearTimeout(this.idleTimer);
+        try {
+            await this.client.sendMessage(`${normalized}@c.us`, text);
+            return true;
+        } catch (err) {
+            if (BROWSER_ERROR_RE.test(err?.message || '')) {
+                this.scheduleRetry(`Send failed due to browser error (${err.message}). Restarting...`, 'reconnecting');
+                const retryErr = new Error(`WhatsApp browser stalled (${err.message}); restarting to retry.`);
+                retryErr.code = 'WHATSAPP_NOT_READY';
+                throw retryErr;
+            }
+            throw err;
+        } finally {
+            this.activeSends--;
+            this.scheduleIdle();
+        }
     }
 
     async stop() {
         clearTimeout(this.retryTimer);
         clearTimeout(this.watchdog);
+        clearTimeout(this.idleTimer);
+        this.rejectWaiters('WhatsApp service stopped.');
         const previous = this.client;
         this.launchController?.abort();
         this.client = null;
         this.setStatus('starting');
-        if (previous) { previous.removeAllListeners(); await previous.destroy(); }
+        await this.destroyClient(previous);
     }
 }
 

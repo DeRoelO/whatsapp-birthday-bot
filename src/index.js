@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { startServer } from './server.js';
-import { initWhatsApp, reinitWhatsApp } from './services/whatsapp.js';
+import { initWhatsApp, reinitWhatsApp, keepAliveWhatsApp } from './services/whatsapp.js';
 import { syncContacts } from './services/sync.js';
 import { startBirthdayScheduler } from './services/birthday.js';
 import cron from 'node-cron';
@@ -43,6 +43,11 @@ const startApp = async () => {
     cron.schedule('0 2 * * *', async () => {
         console.log('Cronjob: Daily CardDAV sync starting...');
         await syncContacts();
+    });
+
+    // Periodically wake WhatsApp briefly so linked-device sessions never expire from 14-day inactivity.
+    cron.schedule('0 3 */5 * *', async () => {
+        await keepAliveWhatsApp();
     });
 };
 
