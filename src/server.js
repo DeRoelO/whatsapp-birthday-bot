@@ -27,9 +27,10 @@ app.get('/', async (req, res) => {
     try {
         const stats = await getStats();
         const connected = wa.isAvailable();
+        const waStatus = wa.getStatus();
         const settings = await getAllSettings();
         const upcoming = await getUpcomingBirthdays(60);
-        res.render('index', { stats, connected, settings, upcoming, page: 'dashboard' });
+        res.render('index', { stats, connected, waStatus, settings, upcoming, page: 'dashboard' });
     } catch (err) {
         res.status(500).send(err.message);
     }
