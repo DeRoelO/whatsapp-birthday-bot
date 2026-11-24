@@ -109,10 +109,10 @@ test('disconnected clears stale QR/code and initialization failures expose an er
 });
 
 test('ready session sleeps when idle and wakes automatically to send a message', async t => {
-    const { service, clients } = setup(t, { idleTimeoutMs: 20 });
+    const { service, clients } = setup(t, { idleTimeoutMs: 40 });
     await service.start();
     clients[0].emit('ready');
-    await new Promise(resolve => setTimeout(resolve, 40));
+    await new Promise(resolve => setTimeout(resolve, 80));
     assert.equal(service.getStatus().state, 'idle');
     assert.equal(service.isAvailable(), true);
     assert.equal(clients[0].destroyed, true);
@@ -124,18 +124,19 @@ test('ready session sleeps when idle and wakes automatically to send a message',
     await sendPromise;
     assert.deepEqual(clients[1].sent, { id: '31612345678@c.us', text: 'Gefeliciteerd!' });
 
-    await new Promise(resolve => setTimeout(resolve, 40));
+    await new Promise(resolve => setTimeout(resolve, 80));
     assert.equal(service.getStatus().state, 'idle');
     assert.equal(clients[1].destroyed, true);
 });
 
 test('stuck authenticated session automatically restarts after retryDelayMs', async t => {
-    const { service, clients } = setup(t, { timeoutMs: 15, retryDelayMs: 20 });
+    const { service, clients } = setup(t, { timeoutMs: 80, retryDelayMs: 40 });
     await service.start();
     clients[0].emit('authenticated');
-    await new Promise(resolve => setTimeout(resolve, 25));
+    await new Promise(resolve => setTimeout(resolve, 95));
     assert.equal(service.getStatus().state, 'error');
-    await new Promise(resolve => setTimeout(resolve, 30));
+    assert.equal(clients.length, 1);
+    await new Promise(resolve => setTimeout(resolve, 50));
     assert.equal(clients.length, 2);
     assert.equal(service.getStatus().state, 'starting');
 });
